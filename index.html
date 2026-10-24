@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ErgoEye — ประเมินท่าทางการทำงานด้วย AI (RULA)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#EDF0F3; --surface:#FFFFFF; --ink:#18263A; --muted:#5B6878; --line:#C9D1DA;
+  --hazard:#F2B705; --hazard-ink:#18263A;
+  --l1:#2E9E5B; --l2:#D9A400; --l3:#E06A1B; --l4:#C62828;
+  --stage:#000;
+  --radius-lg:14px; --radius-sm:8px;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#101A27; --surface:#172435; --ink:#E6ECF2; --muted:#9AA8B8; --line:#2A3B50;
+    --l2:#E8B820;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#101A27; --surface:#172435; --ink:#E6ECF2; --muted:#9AA8B8; --line:#2A3B50; --l2:#E8B820;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI","Noto Sans Thai",Tahoma,sans-serif;
+  font-size:16px;line-height:1.55}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--hazard);outline-offset:2px}
+
+header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 20px 10px;max-width:1240px;margin:0 auto}
+.brand{font-weight:700;font-size:1.5rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand .eye{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--hazard);position:relative;flex:none}
+.brand .eye::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--ink)}
+.tagline{color:var(--muted);font-size:.95rem}
+.privacy{margin-left:auto;font-size:.85rem;color:var(--muted)}
+
+main{max-width:1240px;margin:0 auto;padding:0 20px 40px;display:grid;gap:20px;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+@media (max-width:900px){main{grid-template-columns:1fr;padding:0 12px 32px}header.top{padding:12px 12px 8px}.privacy{margin-left:0;width:100%}}
+
+/* ---------- Stage ---------- */
+.stage{position:relative;background:var(--stage);border-radius:var(--radius-lg);overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
+.stage canvas{width:100%;height:100%;object-fit:contain;display:block}
+.stage video{display:none}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#C9D1DA;text-align:center;padding:24px}
+.empty strong{color:#fff;font-size:1.15rem;font-weight:600}
+.status{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.6);color:#fff;font-size:.85rem;padding:4px 10px;border-radius:999px}
+
+/* the score ladder: the one bold element */
+.ladder{position:absolute;right:12px;top:12px;bottom:12px;width:74px;display:flex;flex-direction:column-reverse;gap:4px}
+.rung{flex:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;
+  color:rgba(255,255,255,.55);background:rgba(255,255,255,.08);transition:transform .15s ease, background .15s ease}
+.rung[data-l="1"].on{background:var(--l1);color:#fff}
+.rung[data-l="2"].on{background:var(--l2);color:#18263A}
+.rung[data-l="3"].on{background:var(--l3);color:#fff}
+.rung[data-l="4"].on{background:var(--l4);color:#fff}
+.rung.current{transform:scaleX(1.18);font-size:1.9rem;box-shadow:0 0 0 3px #fff inset}
+.verdict{position:absolute;left:12px;right:98px;bottom:12px;background:rgba(0,0,0,.66);color:#fff;border-radius:10px;padding:10px 14px;display:none}
+.verdict.show{display:block}
+.verdict b{font-size:1.05rem}
+.verdict small{display:block;color:#C9D1DA}
+
+.alarm{position:absolute;left:0;right:0;top:0;background:var(--l4);color:#fff;font-weight:600;padding:10px 16px;text-align:center;transform:translateY(-100%);transition:transform .2s ease}
+.alarm.show{transform:none}
+@media (prefers-reduced-motion:reduce){.rung,.alarm{transition:none}}
+
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:9px 14px;cursor:pointer;font-weight:500;min-height:44px}
+.btn:hover{border-color:var(--ink)}
+.btn.primary{background:var(--hazard);color:var(--hazard-ink);border-color:var(--hazard);font-weight:600}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent}
+
+/* ---------- Panels ---------- */
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px 18px}
+section.panel + section.panel{margin-top:16px}
+.panel h2{font-size:1.05rem;margin:0 0 4px;font-weight:600}
+.panel .hint{color:var(--muted);font-size:.88rem;margin:0 0 12px}
+
+.parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.parts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.part{border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
+.part::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--line)}
+.part[data-sev="1"]::before{background:var(--l1)} .part[data-sev="2"]::before{background:var(--l2)}
+.part[data-sev="3"]::before{background:var(--l3)} .part[data-sev="4"]::before{background:var(--l4)}
+.part .name{font-size:.85rem;color:var(--muted)}
+.part .val{font-size:1.4rem;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
+.part .val small{font-size:.8rem;font-weight:500;color:var(--muted)}
+.part .ang{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.sums{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:.9rem;color:var(--muted)}
+.sums b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+.dist{display:flex;height:16px;border-radius:999px;overflow:hidden;background:var(--paper);margin:8px 0}
+.dist span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:0}
+#timeline{width:100%;height:120px;display:block;margin-top:8px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.kv div{background:var(--paper);border-radius:10px;padding:8px 10px}
+.kv span{display:block;font-size:.8rem;color:var(--muted)}
+.kv b{font-size:1.2rem;font-variant-numeric:tabular-nums}
+
+form.settings{display:grid;gap:10px}
+.field{display:grid;gap:4px}
+.field label,.field .lab{font-size:.88rem;color:var(--muted)}
+.field input[type=text],.field input[type=url],.field input[type=number],.field select{
+  border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;background:var(--paper);min-height:42px;width:100%}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;cursor:pointer}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--ink);flex:none}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:500}
+
+.records{display:grid;gap:10px}
+.rec{display:grid;grid-template-columns:88px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px}
+.rec img{width:88px;height:66px;object-fit:cover;border-radius:6px;background:#000}
+.rec .t{font-weight:600;font-size:.95rem}
+.rec .m{font-size:.82rem;color:var(--muted)}
+.badge{font-weight:700;font-size:1.3rem;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
+.badge[data-l="1"]{background:var(--l1)} .badge[data-l="2"]{background:var(--l2);color:#18263A}
+.badge[data-l="3"]{background:var(--l3)} .badge[data-l="4"]{background:var(--l4)}
+.emptyrec{color:var(--muted);font-size:.9rem;border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.92rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.82rem}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="eye" aria-hidden="true"></span>ErgoEye</div>
+  <div class="tagline">ประเมินความเสี่ยงท่าทางการทำงานแบบ RULA ด้วยกล้องมือถือ</div>
+  <div class="privacy">ประมวลผลบนเครื่องนี้เท่านั้น ไม่มีการส่งหรือเก็บวิดีโอ</div>
+</header>
+
+<main>
+  <div>
+    <div class="stage" id="stage">
+      <canvas id="canvas" width="960" height="720" aria-label="ภาพจากกล้องพร้อมโครงร่างท่าทาง"></canvas>
+      <video id="video" playsinline muted></video>
+      <div class="empty" id="empty">
+        <strong>เปิดกล้องเพื่อเริ่มประเมิน</strong>
+        <span>ถ่ายให้เห็นทั้งตัว จากด้านข้างจะวัดมุมก้มได้แม่นที่สุด</span>
+      </div>
+      <div class="status" id="status">กำลังโหลดโมเดล AI…</div>
+      <div class="ladder" id="ladder" aria-hidden="true"></div>
+      <div class="verdict" id="verdict" aria-live="polite"><b id="vTitle"></b><small id="vText"></small></div>
+      <div class="alarm" id="alarm" role="alert">ท่าทางเสี่ยงสูงต่อเนื่อง ควรปรับท่าทันที</div>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="btnCam" disabled>เปิดกล้อง</button>
+      <button class="btn" id="btnFlip" disabled>สลับกล้องหน้า/หลัง</button>
+      <button class="btn" id="btnFile" disabled>เลือกรูปหรือวิดีโอ</button>
+      <input type="file" id="file" accept="image/*,video/*" class="sr" tabindex="-1">
+      <button class="btn" id="btnSnap" disabled>บันทึกท่านี้</button>
+      <button class="btn ghost" id="btnStop" disabled>หยุด</button>
+    </div>
+
+    <section class="panel" style="margin-top:16px">
+      <h2>คะแนนรายส่วนของร่างกาย</h2>
+      <p class="hint">มุมวัดจากจุดข้อต่อ 3 มิติที่ AI ประมาณได้ แถบสีด้านซ้ายบอกระดับความเสี่ยงของแต่ละส่วน</p>
+      <div class="parts" id="parts"></div>
+      <div class="sums" id="sums"></div>
+    </section>
+
+    <section class="panel">
+      <h2>สรุปช่วงการประเมินนี้</h2>
+      <p class="hint">สัดส่วนเวลาที่อยู่ในแต่ละระดับการแก้ไข (Action Level) ตั้งแต่เปิดกล้อง</p>
+      <div class="dist" id="dist"></div>
+      <div class="legend">
+        <span><i style="background:var(--l1)"></i>ระดับ 1 ยอมรับได้</span>
+        <span><i style="background:var(--l2)"></i>ระดับ 2 ควรศึกษาเพิ่ม</span>
+        <span><i style="background:var(--l3)"></i>ระดับ 3 ปรับปรุงเร็ว ๆ นี้</span>
+        <span><i style="background:var(--l4)"></i>ระดับ 4 ปรับปรุงทันที</span>
+      </div>
+      <canvas id="timeline" width="800" height="120" aria-label="กราฟคะแนน RULA ตามเวลา"></canvas>
+      <div class="kv">
+        <div><span>ระยะเวลา</span><b id="kDur">0:00</b></div>
+        <div><span>คะแนนสูงสุด</span><b id="kMax">–</b></div>
+        <div><span>ส่วนที่เสี่ยงบ่อยสุด</span><b id="kPart">–</b></div>
+      </div>
+    </section>
+  </div>
+
+  <div>
+    <section class="panel">
+      <h2>ข้อมูลงานที่ประเมิน</h2>
+      <p class="hint">ส่วนที่กล้องมองไม่เห็น ให้ผู้ประเมินกรอกเอง ตามแบบประเมิน RULA ขั้นที่ 7–8 และ 14–15</p>
+      <form class="settings" id="settings" onsubmit="return false">
+        <div class="row2">
+          <div class="field"><label for="fStation">จุดงาน / แผนก</label><input type="text" id="fStation" placeholder="เช่น คลังพัสดุ ชั้นวาง B"></div>
+          <div class="field"><label for="fTask">งานที่ทำ</label><input type="text" id="fTask" placeholder="เช่น ยกกล่องเวชภัณฑ์ลงชั้นล่าง"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="fLoad">น้ำหนักหรือแรงที่ใช้</label>
+            <select id="fLoad">
+              <option value="0">น้อยกว่า 2 กก. เป็นครั้งคราว</option>
+              <option value="1">2–10 กก. เป็นครั้งคราว</option>
+              <option value="2">2–10 กก. ค้างไว้หรือทำซ้ำ</option>
+              <option value="3">มากกว่า 10 กก. หรือมีแรงกระแทก</option>
+            </select></div>
+          <div class="field"><label for="fSide">แขนที่ประเมิน</label>
+            <select id="fSide">
+              <option value="auto">อัตโนมัติ (ข้างที่เห็นชัด/เสี่ยงกว่า)</option>
+              <option value="right">แขนขวาของผู้ถูกประเมิน</option>
+              <option value="left">แขนซ้ายของผู้ถูกประเมิน</option>
+            </select></div>
+        </div>
+        <label class="check"><input type="checkbox" id="fMuscle">ค้างท่าเดิมเกิน 1 นาที หรือทำซ้ำมากกว่า 4 ครั้งต่อนาที</label>
+        <label class="check"><input type="checkbox" id="fLegs" checked>ขาและเท้ารองรับน้ำหนักสมดุลดี</label>
+        <details>
+          <summary>ปรับเพิ่มเติม</summary>
+          <div class="settings" style="display:grid;gap:10px;margin-top:10px">
+            <label class="check"><input type="checkbox" id="fShoulder">ยกไหล่ขึ้น</label>
+            <label class="check"><input type="checkbox" id="fArmSup">แขนมีที่วางพักหรือเอนพิงอยู่</label>
+            <div class="row2">
+              <div class="field"><label for="fAlert">เตือนเมื่อเสี่ยงสูงต่อเนื่อง (วินาที)</label><input type="number" id="fAlert" min="2" max="60" value="5"></div>
+              <div class="field"><label for="fAssessor">ชื่อผู้ประเมิน</label><input type="text" id="fAssessor" placeholder="เช่น จป. วิชาชีพ"></div>
+            </div>
+            <div class="field"><label for="fHook">ส่งผลเข้า Google Sheet และแจ้งเตือน LINE (ลิงก์ Apps Script)</label>
+              <input type="url" id="fHook" placeholder="https://script.google.com/macros/s/…/exec"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn" id="btnCalib" type="button" disabled>ปรับเทียบท่ายืนตรง</button>
+              <button class="btn ghost" id="btnResetCalib" type="button">ล้างค่าปรับเทียบ</button>
+            </div>
+            <p class="hint" style="margin:0" id="calibInfo">ให้ผู้ถูกประเมินยืนตรง มองตรง แขนแนบลำตัว แล้วกดปรับเทียบ เพื่อหักมุมคลาดเคลื่อนของกล้อง</p>
+          </div>
+        </details>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>ท่าที่บันทึกไว้</h2>
+      <p class="hint">กด “บันทึกท่านี้” ตอนท่าทางที่ต้องการประเมิน ภาพเก็บไว้ในเครื่องนี้เท่านั้น</p>
+      <div class="records" id="records"><div class="emptyrec">ยังไม่มีท่าที่บันทึก</div></div>
+      <div class="controls">
+        <button class="btn" id="btnCsv" disabled>ดาวน์โหลดผล (CSV)</button>
+        <button class="btn ghost" id="btnClear" disabled>ล้างรายการ</button>
+      </div>
+    </section>
+  </div>
+</main>
+<footer>
+  ErgoEye ใช้วิธี RULA (McAtamney &amp; Corlett, 1993) ร่วมกับ MediaPipe Pose Landmarker เป็นเครื่องมือคัดกรองเบื้องต้น ไม่ใช้แทนการประเมินโดยผู้เชี่ยวชาญด้านการยศาสตร์
+</footer>
+<div class="toast" id="toast" role="status"></div>
+<script type="module">
+// ===== RULA engine (McAtamney & Corlett, 1993) =====
+const RULA_A = [ // [upperArm-1][lowerArm-1][(wrist-1)*2 + (twist-1)]
+  [[1,2,2,2,2,3,3,3],[2,2,2,2,3,3,3,3],[2,3,3,3,3,3,4,4]],
+  [[2,3,3,3,3,4,4,4],[3,3,3,3,3,4,4,4],[3,4,4,4,4,4,5,5]],
+  [[3,3,4,4,4,4,5,5],[3,4,4,4,4,4,5,5],[4,4,4,4,4,5,5,5]],
+  [[4,4,4,4,4,5,5,5],[4,4,4,4,4,5,5,5],[4,4,4,5,5,5,6,6]],
+  [[5,5,5,5,5,6,6,7],[5,6,6,6,6,7,7,7],[6,6,6,7,7,7,7,8]],
+  [[7,7,7,7,7,8,8,9],[8,8,8,8,8,9,9,9],[9,9,9,9,9,9,9,9]]
+];
+const RULA_B = [ // [neck-1][(trunk-1)*2 + (legs-1)]
+  [1,3,2,3,3,4,5,5,6,6,7,7],
+  [2,3,2,3,4,5,5,5,6,7,7,7],
+  [3,3,3,4,4,5,5,6,6,7,7,7],
+  [5,5,5,6,6,7,7,7,7,7,8,8],
+  [7,7,7,7,7,8,8,8,8,8,8,8],
+  [8,8,8,8,8,8,8,9,9,9,9,9]
+];
+const RULA_C = [ // [min(A,8)-1][min(B,7)-1]
+  [1,2,3,3,4,5,5],[2,2,3,4,4,5,5],[3,3,3,4,4,5,6],[3,3,3,4,5,6,6],
+  [4,4,4,5,6,7,7],[4,4,5,6,6,7,7],[5,5,6,6,7,7,7],[5,5,6,7,7,7,7]
+];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+// ---- vector helpers (3D) ----
+const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y, z: a.z - b.z });
+const add = (a, b) => ({ x: a.x + b.x, y: a.y + b.y, z: a.z + b.z });
+const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 });
+const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
+const len = a => Math.sqrt(dot(a, a)) || 1e-9;
+const unit = a => { const l = len(a); return { x: a.x / l, y: a.y / l, z: a.z / l }; };
+const scale = (a, s) => ({ x: a.x * s, y: a.y * s, z: a.z * s });
+const angle = (a, b) => Math.acos(clamp(dot(unit(a), unit(b)), -1, 1)) * 180 / Math.PI;
+// remove component of v along axis n (n unit)
+const reject = (v, n) => sub(v, scale(n, dot(v, n)));
+
+/**
+ * Compute RULA from MediaPipe world landmarks (y points DOWN, metres, hip-centred).
+ * opts: { side:'auto'|'left'|'right', legsSupported, muscle, load(0..3), armSupported,
+ *         shoulderRaised, offsets:{neck,trunk,wrist} }
+ */
+function computeRULA(lm, opts = {}) {
+  const o = Object.assign({ side: 'auto', legsSupported: true, muscle: false, load: 0,
+    armSupported: false, shoulderRaised: false, offsets: { neck: 0, trunk: 0, wrist: 0 } }, opts);
+  const P = i => lm[i];
+  const vis = i => (lm[i].visibility == null ? 1 : lm[i].visibility);
+
+  const lSh = P(11), rSh = P(12), lHip = P(23), rHip = P(24);
+  const midSh = mid(lSh, rSh), midHip = mid(lHip, rHip);
+  const midEar = mid(P(7), P(8));
+  const up = { x: 0, y: -1, z: 0 };
+  const trunkVec = sub(midSh, midHip);
+  const trunkU = unit(trunkVec);
+  const rightAxis = unit(sub(rSh, lSh)); // body's left->right (subject's right)
+  // body forward = direction the face points, made perpendicular to trunk & shoulder line
+  let fwdRaw = sub(P(0), midEar);
+  fwdRaw = reject(reject(fwdRaw, trunkU), rightAxis);
+  const fwd = unit(fwdRaw);
+
+  // ---- Trunk ----
+  const trunkAng = Math.max(0, angle(trunkVec, up) - o.offsets.trunk);
+  const trunkSign = dot(trunkU, fwd) >= 0 ? 1 : -1; // + flexion
+  let trunk = trunkAng < 5 ? 1 : trunkAng <= 20 ? 2 : trunkAng <= 60 ? 3 : 4;
+  if (trunkSign < 0 && trunkAng >= 5) trunk = Math.max(trunk, 2); // extension
+  const sideBend = Math.abs(Math.asin(clamp(dot(trunkU, unit({ x: rightAxis.x, y: 0, z: rightAxis.z })), -1, 1)) * 180 / Math.PI);
+  const shLineH = { x: rSh.x - lSh.x, y: 0, z: rSh.z - lSh.z };
+  const hipLineH = { x: rHip.x - lHip.x, y: 0, z: rHip.z - lHip.z };
+  const twist = angle(shLineH, hipLineH);
+  const trunkAdj = (sideBend > 10 ? 1 : 0) + (twist > 20 ? 1 : 0) > 0 ? 1 : 0;
+  trunk = clamp(trunk + trunkAdj, 1, 6);
+
+  // ---- Neck ----
+  const neckVec = sub(midEar, midSh);
+  let neckAng = angle(neckVec, trunkVec) - o.offsets.neck;
+  const neckFwd = dot(reject(neckVec, trunkU), fwd);
+  const neckExt = neckFwd < 0 && neckAng > 10;
+  neckAng = Math.max(0, neckAng);
+  let neck = neckExt ? 4 : neckAng <= 10 ? 1 : neckAng <= 20 ? 2 : 3;
+  const headTilt = Math.abs(90 - angle(sub(P(8), P(7)), trunkVec)); // ear line vs trunk
+  if (headTilt > 15) neck += 1;
+  neck = clamp(neck, 1, 6);
+
+  const legs = o.legsSupported ? 1 : 2;
+
+  // ---- Arm (per side) ----
+  function arm(s) {
+    const [sh, el, wr, ix, other] = s === 'left' ? [11, 13, 15, 19, 12] : [12, 14, 16, 20, 11];
+    const ua = sub(P(el), P(sh));
+    const down = scale(trunkU, -1);
+    const uaAng = angle(ua, down);
+    const uaFwd = dot(ua, fwd);
+    let upper = (uaFwd < 0 && uaAng > 20) ? 2 : uaAng <= 20 ? 1 : uaAng <= 45 ? 2 : uaAng <= 90 ? 3 : 4;
+    const outward = unit(sub(P(sh), P(other)));
+    const abducted = dot(unit(ua), outward) > 0.5; // > ~30° to the side
+    if (abducted) upper += 1;
+    if (o.shoulderRaised) upper += 1;
+    if (o.armSupported) upper -= 1;
+    upper = clamp(upper, 1, 6);
+
+    const fa = sub(P(wr), P(el));
+    const elbowFlex = angle(ua, fa); // 0 = straight
+    let lower = (elbowFlex >= 60 && elbowFlex <= 100) ? 1 : 2;
+    // working across midline or out to side
+    const wrLat = dot(sub(P(wr), midSh), rightAxis) * (s === 'left' ? -1 : 1);
+    if (wrLat < -0.05 || wrLat > 0.45) lower += 1;
+    lower = clamp(lower, 1, 3);
+
+    const hand = sub(P(ix), P(wr));
+    const wristAng = Math.max(0, angle(fa, hand) - o.offsets.wrist);
+    let wrist = wristAng <= 5 ? 1 : wristAng <= 15 ? 2 : 3;
+    wrist = clamp(wrist, 1, 4);
+    const wTwist = 1;
+    const visScore = vis(sh) + vis(el) + vis(wr);
+    return { side: s, upper, lower, wrist, wTwist, uaAng, elbowFlex, wristAng, abducted, visScore };
+  }
+  const L = arm('left'), R = arm('right');
+  const tableA = a => RULA_A[a.upper - 1][a.lower - 1][(a.wrist - 1) * 2 + (a.wTwist - 1)];
+  let chosen;
+  if (o.side === 'left') chosen = L;
+  else if (o.side === 'right') chosen = R;
+  else {
+    // pick the visible side; if both visible, the worse one
+    if (Math.abs(L.visScore - R.visScore) > 0.6) chosen = L.visScore > R.visScore ? L : R;
+    else chosen = tableA(L) >= tableA(R) ? L : R;
+  }
+  const add2 = (o.muscle ? 1 : 0) + clamp(o.load | 0, 0, 3);
+  const postureA = tableA(chosen);
+  const postureB = RULA_B[neck - 1][(trunk - 1) * 2 + (legs - 1)];
+  const scoreC = postureA + add2;
+  const scoreD = postureB + add2;
+  const final = RULA_C[clamp(scoreC, 1, 8) - 1][clamp(scoreD, 1, 7) - 1];
+  const level = final <= 2 ? 1 : final <= 4 ? 2 : final <= 6 ? 3 : 4;
+  return {
+    final, level, postureA, postureB, scoreC, scoreD,
+    arm: chosen, arms: { left: L, right: R },
+    parts: {
+      upper: { score: chosen.upper, max: 6, angle: chosen.uaAng },
+      lower: { score: chosen.lower, max: 3, angle: chosen.elbowFlex },
+      wrist: { score: chosen.wrist, max: 4, angle: chosen.wristAng },
+      neck: { score: neck, max: 6, angle: neckAng, ext: neckExt },
+      trunk: { score: trunk, max: 6, angle: trunkAng, sideBend, twist },
+      legs: { score: legs, max: 2 }
+    },
+    raw: { neckAng: angle(neckVec, trunkVec), trunkAng: angle(trunkVec, up), wristAng: angle(sub(P(chosen.side === 'left' ? 15 : 16), P(chosen.side === 'left' ? 13 : 14)), sub(P(chosen.side === 'left' ? 19 : 20), P(chosen.side === 'left' ? 15 : 16))) }
+  };
+}
+
+
+// ===== App =====
+const MP_VER = '0.10.14';
+const $ = id => document.getElementById(id);
+const canvas = $('canvas'), ctx = canvas.getContext('2d');
+const video = $('video');
+const LEVEL_TXT = {
+  1: ['ระดับ 1 · ยอมรับได้', 'ท่าทางเหมาะสม หากไม่ได้ทำต่อเนื่องเป็นเวลานาน'],
+  2: ['ระดับ 2 · ควรศึกษาเพิ่มเติม', 'อาจต้องปรับปรุงลักษณะงานในอนาคต'],
+  3: ['ระดับ 3 · ควรปรับปรุงเร็ว ๆ นี้', 'ควรตรวจสอบงานและปรับเปลี่ยนในระยะเวลาอันใกล้'],
+  4: ['ระดับ 4 · ต้องปรับปรุงทันที', 'ท่าทางมีความเสี่ยงสูง ต้องแก้ไขลักษณะงานโดยเร็วที่สุด']
+};
+const PART_NAMES = { upper: 'ต้นแขน', lower: 'ปลายแขน', wrist: 'ข้อมือ', neck: 'คอ', trunk: 'ลำตัว', legs: 'ขา' };
+const levelOf = s => s <= 2 ? 1 : s <= 4 ? 2 : s <= 6 ? 3 : 4;
+const sevOf = (part, sc) => {
+  const t = { upper: [1, 2, 3], lower: [1, 2, 3], wrist: [1, 2, 3], neck: [1, 2, 3], trunk: [1, 2, 3], legs: [1, 2, 2] }[part];
+  return sc <= t[0] ? 1 : sc <= t[1] ? 2 : sc <= t[2] ? 3 : 4;
+};
+const SEV_COLOR = () => {
+  const cs = getComputedStyle(document.documentElement);
+  return { 1: cs.getPropertyValue('--l1').trim(), 2: cs.getPropertyValue('--l2').trim(), 3: cs.getPropertyValue('--l3').trim(), 4: cs.getPropertyValue('--l4').trim() };
+};
+
+// ---- storage (per-viewer convenience, optional) ----
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('ergoeye:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('ergoeye:' + k, JSON.stringify(v)); } catch (e) { } }
+};
+
+// ---- state ----
+let landmarker = null, mode = 'VIDEO', running = false, stream = null, facing = 'environment';
+let mirrored = false, lastVideoTime = -1, rafId = 0;
+let lastResult = null, lastLm2d = null, recent = [];
+let offsets = store.get('offsets', { neck: 0, trunk: 0, wrist: 0 });
+let records = store.get('records', []);
+const session = { start: 0, last: 0, levelTime: [0, 0, 0, 0, 0], samples: [], partHigh: {}, max: 0 };
+let highSince = 0, alarmOn = false;
+
+// ---- ladder ----
+(function buildLadder() {
+  const el = $('ladder');
+  for (let s = 1; s <= 7; s++) {
+    const r = document.createElement('div');
+    r.className = 'rung'; r.dataset.s = s; r.dataset.l = levelOf(s); r.textContent = s;
+    el.appendChild(r);
+  }
+})();
+function setLadder(score) {
+  document.querySelectorAll('.rung').forEach(r => {
+    const s = +r.dataset.s;
+    r.classList.toggle('on', score != null && s <= score);
+    r.classList.toggle('current', score === s);
+  });
+  const v = $('verdict');
+  if (score == null) { v.classList.remove('show'); return; }
+  const [t, d] = LEVEL_TXT[levelOf(score)];
+  $('vTitle').textContent = 'RULA ' + score + ' — ' + t.split('·')[1].trim();
+  $('vText').textContent = d;
+  v.classList.add('show');
+}
+
+// ---- options from form ----
+function opts() {
+  return {
+    side: $('fSide').value, load: +$('fLoad').value, muscle: $('fMuscle').checked,
+    legsSupported: $('fLegs').checked, shoulderRaised: $('fShoulder').checked,
+    armSupported: $('fArmSup').checked, offsets
+  };
+}
+['fStation', 'fTask', 'fAssessor', 'fHook', 'fAlert', 'fLoad', 'fSide'].forEach(id => {
+  const v = store.get('f:' + id, null); if (v != null) $(id).value = v;
+  $(id).addEventListener('change', () => store.set('f:' + id, $(id).value));
+});
+['fMuscle', 'fLegs', 'fShoulder', 'fArmSup'].forEach(id => {
+  const v = store.get('f:' + id, null); if (v != null) $(id).checked = v;
+  $(id).addEventListener('change', () => { store.set('f:' + id, $(id).checked); recompute(); });
+});
+['fLoad', 'fSide'].forEach(id => $(id).addEventListener('change', recompute));
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2600);
+}
+function setStatus(msg) { const s = $('status'); s.textContent = msg; s.style.display = msg ? 'block' : 'none'; }
+
+// ---- load model ----
+let PoseLandmarker, FilesetResolver;
+async function loadModel() {
+  try {
+    let mod;
+    try { mod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}`); }
+    catch (e) { mod = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/vision_bundle.mjs`); }
+    PoseLandmarker = mod.PoseLandmarker; FilesetResolver = mod.FilesetResolver;
+    const fileset = await FilesetResolver.forVisionTasks(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VER}/wasm`);
+    const make = delegate => PoseLandmarker.createFromOptions(fileset, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task',
+        delegate
+      },
+      runningMode: 'VIDEO', numPoses: 1,
+      minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5
+    });
+    try { landmarker = await make('GPU'); } catch (e) { landmarker = await make('CPU'); }
+    mode = 'VIDEO';
+    setStatus('');
+    ['btnCam', 'btnFile', 'btnFlip'].forEach(id => $(id).disabled = false);
+  } catch (err) {
+    console.error(err);
+    setStatus('โหลดโมเดลไม่สำเร็จ ตรวจสอบอินเทอร์เน็ตแล้วรีเฟรชหน้า');
+  }
+}
+async function setMode(m) {
+  if (mode !== m) { await landmarker.setOptions({ runningMode: m }); mode = m; }
+}
+
+// ---- camera ----
+async function startCamera() {
+  stopAll();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+    });
+  } catch (e) {
+    toast(e.name === 'NotAllowedError' ? 'ไม่ได้รับอนุญาตให้ใช้กล้อง เปิดสิทธิ์กล้องในเบราว์เซอร์แล้วลองใหม่' : 'เปิดกล้องไม่ได้ ต้องเปิดผ่านลิงก์ https หรือ localhost');
+    return;
+  }
+  const track = stream.getVideoTracks()[0];
+  const fm = track.getSettings().facingMode;
+  mirrored = fm ? fm === 'user' : facing === 'user';
+  video.srcObject = stream; video.loop = false;
+  await video.play();
+  await setMode('VIDEO');
+  begin();
+}
+function begin() {
+  $('empty').style.display = 'none';
+  running = true; lastVideoTime = -1; recent = [];
+  resetSession();
+  ['btnSnap', 'btnStop', 'btnCalib'].forEach(id => $(id).disabled = false);
+  loop();
+}
+function stopAll() {
+  running = false; cancelAnimationFrame(rafId);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  video.pause(); video.removeAttribute('src'); video.srcObject = null;
+  showAlarm(false);
+}
+$('btnCam').onclick = startCamera;
+$('btnFlip').onclick = () => { facing = facing === 'environment' ? 'user' : 'environment'; startCamera(); };
+$('btnStop').onclick = () => { stopAll(); $('btnStop').disabled = true; toast('หยุดการประเมินแล้ว ผลสรุปยังอยู่ด้านล่าง'); };
+
+// ---- file input ----
+$('btnFile').onclick = () => $('file').click();
+$('file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  stopAll(); mirrored = false;
+  const url = URL.createObjectURL(f);
+  if (f.type.startsWith('video/')) {
+    video.src = url; video.loop = true;
+    await video.play().catch(() => { });
+    await setMode('VIDEO');
+    begin();
+  } else {
+    const img = new Image();
+    img.onload = async () => {
+      await setMode('IMAGE');
+      $('empty').style.display = 'none';
+      fitCanvas(img.naturalWidth, img.naturalHeight);
+      const res = landmarker.detect(img);
+      drawFrame(img);
+      handleResult(res, true);
+      ['btnSnap', 'btnCalib'].forEach(id => $(id).disabled = false);
+    };
+    img.src = url;
+    lastSource = img;
+  }
+  e.target.value = '';
+};
+let lastSource = video;
+
+function fitCanvas(w, h) {
+  if (!w || !h) return;
+  const maxW = 1280, k = Math.min(1, maxW / w);
+  const W = Math.round(w * k), H = Math.round(h * k);
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  $('stage').style.aspectRatio = `${W}/${H}`;
+}
+function drawFrame(src) {
+  ctx.save();
+  if (mirrored) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
+}
+
+// ---- main loop ----
+function loop() {
+  if (!running) return;
+  rafId = requestAnimationFrame(loop);
+  lastSource = video;
+  if (video.readyState < 2) return;
+  fitCanvas(video.videoWidth, video.videoHeight);
+  if (video.currentTime === lastVideoTime) return;
+  lastVideoTime = video.currentTime;
+  const res = landmarker.detectForVideo(video, performance.now());
+  drawFrame(video);
+  handleResult(res, false);
+}
+
+function handleResult(res, still) {
+  if (!res || !res.worldLandmarks || !res.worldLandmarks.length) {
+    lastResult = null; lastLm2d = null; setLadder(null); renderParts(null);
+    if (!still) tickSession(null);
+    return;
+  }
+  const w = res.worldLandmarks[0].map((p, i) => ({ x: p.x, y: p.y, z: p.z, visibility: res.landmarks[0][i].visibility }));
+  lastLm2d = res.landmarks[0];
+  const r = computeRULA(w, opts());
+  r._world = w;
+  lastResult = r;
+  recent.push(r.final); if (recent.length > 9) recent.shift();
+  const shown = still ? r.final : median(recent);
+  drawSkeleton(lastLm2d, r);
+  setLadder(shown);
+  renderParts(r, shown);
+  if (!still) tickSession(r, shown);
+}
+const median = a => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+
+function recompute() {
+  if (!lastResult) return;
+  const r = computeRULA(lastResult._world, opts()); r._world = lastResult._world; lastResult = r;
+  if (!running) { drawFrame(lastSource); drawSkeleton(lastLm2d, r); }
+  setLadder(r.final); renderParts(r, r.final);
+}
+
+// ---- skeleton drawing ----
+function drawSkeleton(lm, r) {
+  if (!lm) return;
+  const C = SEV_COLOR();
+  const W = canvas.width, H = canvas.height;
+  const pt = i => ({ x: (mirrored ? 1 - lm[i].x : lm[i].x) * W, y: lm[i].y * H });
+  const midp = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const lw = Math.max(4, W / 160);
+  const seg = (a, b, color, width = lw) => {
+    ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = width + 4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  };
+  const grey = 'rgba(255,255,255,.75)';
+  // legs
+  [[23, 25], [25, 27], [24, 26], [26, 28], [23, 24]].forEach(([a, b]) => seg(pt(a), pt(b), grey, lw * .7));
+  const mSh = midp(pt(11), pt(12)), mHip = midp(pt(23), pt(24)), mEar = midp(pt(7), pt(8));
+  seg(pt(11), pt(12), grey, lw * .7);
+  seg(mHip, mSh, C[sevOf('trunk', r.parts.trunk.score)], lw * 1.3);
+  seg(mSh, mEar, C[sevOf('neck', r.parts.neck.score)], lw * 1.1);
+  ['left', 'right'].forEach(side => {
+    const a = r.arms[side];
+    const [sh, el, wr, ix] = side === 'left' ? [11, 13, 15, 19] : [12, 14, 16, 20];
+    const active = r.arm.side === side;
+    const alpha = active ? 1 : .45;
+    ctx.globalAlpha = alpha;
+    seg(pt(sh), pt(el), C[sevOf('upper', a.upper)]);
+    seg(pt(el), pt(wr), C[sevOf('lower', a.lower)]);
+    seg(pt(wr), pt(ix), C[sevOf('wrist', a.wrist)], lw * .7);
+    ctx.globalAlpha = 1;
+  });
+  // joints
+  [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach(i => {
+    const p = pt(i);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, lw * .6, 0, Math.PI * 2); ctx.fill();
+  });
+  // angle labels on the active side
+  const label = (p, txt) => {
+    ctx.font = `600 ${Math.max(13, W / 55)}px "IBM Plex Sans Thai", system-ui, sans-serif`;
+    const m = ctx.measureText(txt), pad = 6, h = Math.max(13, W / 55) + 8;
+    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(p.x + 10, p.y - h / 2, m.width + pad * 2, h);
+    ctx.fillStyle = '#fff'; ctx.fillText(txt, p.x + 10 + pad, p.y + h / 2 - 7);
+  };
+  const s = r.arm.side === 'left' ? [11, 13] : [12, 14];
+  label(pt(s[0]), Math.round(r.parts.upper.angle) + '°');
+  label(pt(s[1]), Math.round(r.parts.lower.angle) + '°');
+  label(mHip, 'ลำตัว ' + Math.round(r.parts.trunk.angle) + '°');
+  label(mEar, 'คอ ' + Math.round(r.parts.neck.angle) + '°');
+}
+
+// ---- parts panel ----
+function renderParts(r, shown) {
+  const el = $('parts');
+  if (!r) {
+    el.innerHTML = Object.values(PART_NAMES).map(n => `<div class="part"><div class="name">${n}</div><div class="val">–</div><div class="ang">ยังไม่พบท่าทาง</div></div>`).join('');
+    $('sums').innerHTML = ''; return;
+  }
+  const angTxt = (k, p) => {
+    if (k === 'legs') return $('fLegs').checked ? 'รองรับดี (กรอกเอง)' : 'ไม่สมดุล (กรอกเอง)';
+    if (k === 'lower') return 'งอศอก ' + Math.round(p.angle) + '°';
+    if (k === 'neck') return (p.ext ? 'เงยหน้า ' : 'ก้ม ') + Math.round(p.angle) + '°';
+    if (k === 'trunk') return 'เอียงจากแนวดิ่ง ' + Math.round(p.angle) + '°';
+    if (k === 'upper') return 'ยกจากลำตัว ' + Math.round(p.angle) + '°' + (r.arm.abducted ? ' · กางออก' : '');
+    return 'งอ ' + Math.round(p.angle) + '°';
+  };
+  el.innerHTML = Object.entries(r.parts).map(([k, p]) =>
+    `<div class="part" data-sev="${sevOf(k, p.score)}"><div class="name">${PART_NAMES[k]}${k === 'upper' || k === 'lower' || k === 'wrist' ? (r.arm.side === 'left' ? ' (ซ้าย)' : ' (ขวา)') : ''}</div>
+     <div class="val">${p.score}<small> / ${p.max}</small></div><div class="ang">${angTxt(k, p)}</div></div>`).join('');
+  $('sums').innerHTML = `<span>คะแนนแขน–ข้อมือ (C) <b>${r.scoreC}</b></span><span>คะแนนคอ–ลำตัว–ขา (D) <b>${r.scoreD}</b></span><span>คะแนน RULA <b>${shown}</b></span>`;
+}
+
+// ---- session ----
+function resetSession() {
+  session.start = performance.now(); session.last = session.start;
+  session.levelTime = [0, 0, 0, 0, 0]; session.samples = []; session.partHigh = {}; session.max = 0;
+  highSince = 0; renderSession();
+}
+let lastRender = 0;
+function tickSession(r, shown) {
+  const now = performance.now(), dt = now - session.last; session.last = now;
+  if (r) {
+    const lv = levelOf(shown);
+    session.levelTime[lv] += dt;
+    session.max = Math.max(session.max, shown);
+    if (!session.samples.length || now - session.samples[session.samples.length - 1].t > 500)
+      session.samples.push({ t: now - session.start, s: shown });
+    if (lv >= 3) {
+      Object.entries(r.parts).forEach(([k, p]) => { if (sevOf(k, p.score) >= 3) session.partHigh[k] = (session.partHigh[k] || 0) + dt; });
+      if (!highSince) highSince = now;
+      if (now - highSince > (+$('fAlert').value || 5) * 1000) showAlarm(true);
+    } else { highSince = 0; showAlarm(false); }
+  }
+  if (now - lastRender > 500) { lastRender = now; renderSession(); }
+}
+function showAlarm(on) {
+  if (on === alarmOn) return;
+  alarmOn = on; $('alarm').classList.toggle('show', on);
+  if (on) { beep(); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { } }
+}
+let audioCtx;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [0, .25].forEach(off => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = 880; o.type = 'square'; g.gain.value = .08;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(audioCtx.currentTime + off); o.stop(audioCtx.currentTime + off + .15);
+    });
+  } catch (e) { }
+}
+function renderSession() {
+  const C = SEV_COLOR();
+  const tot = session.levelTime.slice(1).reduce((a, b) => a + b, 0);
+  $('dist').innerHTML = tot ? [1, 2, 3, 4].map(l => `<span style="width:${(session.levelTime[l] / tot * 100).toFixed(1)}%;background:${C[l]}" title="ระดับ ${l} ${(session.levelTime[l] / tot * 100).toFixed(0)}%"></span>`).join('') : '';
+  const secs = Math.round((session.last - session.start) / 1000);
+  $('kDur').textContent = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+  $('kMax').textContent = session.max || '–';
+  const top = Object.entries(session.partHigh).sort((a, b) => b[1] - a[1])[0];
+  $('kPart').textContent = top ? PART_NAMES[top[0]] : '–';
+  drawTimeline();
+}
+function drawTimeline() {
+  const c = $('timeline'), g = c.getContext('2d');
+  const W = c.width = c.clientWidth * devicePixelRatio || 800, H = c.height = 120 * devicePixelRatio;
+  const C = SEV_COLOR(), cs = getComputedStyle(document.documentElement);
+  g.clearRect(0, 0, W, H);
+  const y = s => H - 6 * devicePixelRatio - (s - 1) / 6 * (H - 12 * devicePixelRatio);
+  // bands
+  [[1, 2, 1], [2, 4, 2], [4, 6, 3], [6, 7, 4]].forEach(([a, b, l]) => {
+    g.fillStyle = C[l]; g.globalAlpha = .12; g.fillRect(0, y(b), W, y(a) - y(b)); g.globalAlpha = 1;
+  });
+  const sm = session.samples; if (sm.length < 2) return;
+  const span = Math.max(30000, sm[sm.length - 1].t);
+  const x = t => t / span * W;
+  g.strokeStyle = cs.getPropertyValue('--ink').trim(); g.lineWidth = 2 * devicePixelRatio; g.lineJoin = 'round';
+  g.beginPath(); sm.forEach((p, i) => i ? g.lineTo(x(p.t), y(p.s)) : g.moveTo(x(p.t), y(p.s))); g.stroke();
+}
+
+// ---- calibration ----
+$('btnCalib').onclick = () => {
+  if (!lastResult) { toast('ยังไม่พบท่าทางในภาพ'); return; }
+  const raw = lastResult.raw;
+  offsets = { neck: Math.min(25, raw.neckAng), trunk: Math.min(15, raw.trunkAng), wrist: Math.min(25, raw.wristAng) };
+  store.set('offsets', offsets); recompute(); showCalib();
+  toast('ปรับเทียบแล้ว');
+};
+$('btnResetCalib').onclick = () => { offsets = { neck: 0, trunk: 0, wrist: 0 }; store.set('offsets', offsets); recompute(); showCalib(); toast('ล้างค่าปรับเทียบแล้ว'); };
+function showCalib() {
+  if (offsets.neck || offsets.trunk || offsets.wrist)
+    $('calibInfo').textContent = `ค่าปรับเทียบปัจจุบัน: คอ ${offsets.neck.toFixed(0)}°, ลำตัว ${offsets.trunk.toFixed(0)}°, ข้อมือ ${offsets.wrist.toFixed(0)}°`;
+}
+showCalib();
+
+// ---- records ----
+function renderRecords() {
+  const el = $('records');
+  $('btnCsv').disabled = $('btnClear').disabled = !records.length;
+  if (!records.length) { el.innerHTML = '<div class="emptyrec">ยังไม่มีท่าที่บันทึก</div>'; return; }
+  el.innerHTML = records.slice().reverse().map(r => `
+    <div class="rec"><img src="${r.img}" alt="ภาพท่าทางที่บันทึก">
+      <div><div class="t">${esc(r.task || 'ไม่ระบุงาน')}</div>
+      <div class="m">${esc(r.station || '')} ${new Date(r.time).toLocaleString('th-TH')}</div>
+      <div class="m">แขน ${r.parts.upper}/${r.parts.lower}/${r.parts.wrist} · คอ ${r.parts.neck} · ลำตัว ${r.parts.trunk}</div></div>
+      <div class="badge" data-l="${r.level}" aria-label="คะแนน RULA ${r.final}">${r.final}</div></div>`).join('');
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+$('btnSnap').onclick = async () => {
+  if (!lastResult) { toast('ยังไม่พบท่าทางในภาพ ขยับให้เห็นทั้งตัว'); return; }
+  const r = lastResult, final = running ? median(recent) : r.final;
+  const t = document.createElement('canvas'); const k = 320 / canvas.width;
+  t.width = 320; t.height = Math.round(canvas.height * k);
+  t.getContext('2d').drawImage(canvas, 0, 0, t.width, t.height);
+  const rec = {
+    time: new Date().toISOString(), station: $('fStation').value, task: $('fTask').value, assessor: $('fAssessor').value,
+    final, level: levelOf(final), scoreC: r.scoreC, scoreD: r.scoreD, side: r.arm.side,
+    parts: Object.fromEntries(Object.entries(r.parts).map(([k, p]) => [k, p.score])),
+    angles: { upperArm: Math.round(r.parts.upper.angle), elbow: Math.round(r.parts.lower.angle), wrist: Math.round(r.parts.wrist.angle), neck: Math.round(r.parts.neck.angle), trunk: Math.round(r.parts.trunk.angle) },
+    load: +$('fLoad').value, muscle: $('fMuscle').checked,
+    img: t.toDataURL('image/jpeg', .7)
+  };
+  records.push(rec); if (records.length > 40) records.shift();
+  store.set('records', records); renderRecords();
+  const hook = $('fHook').value.trim();
+  if (hook) {
+    const { img, ...data } = rec;
+    try {
+      await fetch(hook, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) });
+      toast('บันทึกท่าแล้ว และส่งเข้า Google Sheet แล้ว');
+    } catch (e) { toast('บันทึกในเครื่องแล้ว แต่ส่งเข้า Google Sheet ไม่สำเร็จ ตรวจลิงก์ Apps Script'); }
+  } else toast('บันทึกท่าแล้ว');
+};
+$('btnClear').onclick = () => { if (confirm('ล้างรายการท่าที่บันทึกทั้งหมด?')) { records = []; store.set('records', records); renderRecords(); } };
+$('btnCsv').onclick = () => {
+  const head = ['เวลา', 'จุดงาน', 'งาน', 'ผู้ประเมิน', 'RULA', 'ระดับ', 'แขนที่ประเมิน', 'ต้นแขน', 'ปลายแขน', 'ข้อมือ', 'คอ', 'ลำตัว', 'ขา', 'คะแนน C', 'คะแนน D',
+    'มุมต้นแขน', 'มุมศอก', 'มุมข้อมือ', 'มุมคอ', 'มุมลำตัว', 'น้ำหนัก/แรง', 'ค้างท่า/ทำซ้ำ'];
+  const rows = records.map(r => [new Date(r.time).toLocaleString('th-TH'), r.station, r.task, r.assessor, r.final, r.level, r.side === 'left' ? 'ซ้าย' : 'ขวา',
+    r.parts.upper, r.parts.lower, r.parts.wrist, r.parts.neck, r.parts.trunk, r.parts.legs, r.scoreC, r.scoreD,
+    r.angles.upperArm, r.angles.elbow, r.angles.wrist, r.angles.neck, r.angles.trunk, r.load, r.muscle ? 'ใช่' : 'ไม่']);
+  const csv = '\uFEFF' + [head, ...rows].map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'ErgoEye_RULA_' + new Date().toISOString().slice(0, 10) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+};
+
+renderParts(null); renderRecords(); setLadder(null);
+window.addEventListener('resize', drawTimeline);
+loadModel();
+
+</script>
+</body>
+</html>
