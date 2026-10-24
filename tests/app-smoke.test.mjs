@@ -35,7 +35,7 @@ for (const m of html.matchAll(/<(\w+)[^>]*\sid="([^"]+)"/g)) els[m[2]] = makeEl(
 // form defaults as in the HTML
 Object.assign(els.fLoad, { value: '0' }); Object.assign(els.fSide, { value: 'auto' }); Object.assign(els.fWrist, { value: 'straight' });
 Object.assign(els.fRebaLoad, { value: '0' }); Object.assign(els.fCoupling, { value: '0' }); Object.assign(els.fAlert, { value: '5' });
-els.fLegs.checked = true;
+els.fLegs.checked = true; els.fSendImg.value = 'skeleton';
 const segButtons = ['RULA', 'REBA'].map(m => Object.assign(makeEl('seg' + m, 'BUTTON'), { dataset: { m } }));
 const groups = ['RULA', 'REBA'].map(m => Object.assign(makeEl('grp' + m), { dataset: { method: m } }));
 
@@ -132,6 +132,7 @@ test('saving a REBA posture stores and sends the REBA fields', async () => {
   assert.deepEqual(sent.activity, { static: false, repeat: true, rapid: false });
   assert.equal(sent.load, 2); assert.equal(sent.coupling, 1); assert.equal(sent.shock, false);
   assert.ok(!('img' in sent));
+  assert.match(sent.image, /^data:image\/jpeg;base64,/, 'skeleton image sent by default');
   assert.match(els.records.innerHTML, /<span class="tag">REBA<\/span>/);
 });
 
@@ -139,8 +140,10 @@ test('saving a RULA posture keeps the original field names and adds method', asy
   segButtons[0].fire('click');
   assert.equal(App.state().method, 'RULA'); assert.equal(els.ladder.children.length, 7);
   live(LIFT, 2);
+  els.fSendImg.value = 'none';
   els.btnSnap.onclick(); await flush();
   const sent = fetched.at(-1).body;
+  assert.ok(!('image' in sent), 'no image when switched off');
   assert.deepEqual(Object.keys(sent).sort(),
     ['angles', 'assessor', 'final', 'level', 'load', 'method', 'muscle', 'parts', 'scoreC', 'scoreD', 'side', 'station', 'task', 'time']);
   assert.equal(sent.method, 'RULA');

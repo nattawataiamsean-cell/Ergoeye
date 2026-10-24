@@ -43,7 +43,27 @@ const G = {
   UrlFetchApp: {
     fetch: (url, o) => { if (url.includes('line.me')) pushes.push(JSON.parse(o.payload)); return { getResponseCode: () => 200, getContentText: () => '{}' }; }
   },
-  Logger: { log() { } }
+  Logger: { log() { } },
+  Session: { getScriptTimeZone: () => 'Asia/Bangkok' },
+  Utilities: {
+    formatDate: () => '20261024_150000', base64Decode: b => Buffer.from(b, 'base64'),
+    newBlob: (bytes, type, name) => ({ bytes, type, name })
+  },
+  DriveApp: {
+    Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK' }, Permission: { VIEW: 'VIEW' },
+    createFolder: name => { drive.folders.push(name); return driveFolder; },
+    getFolderById: () => driveFolder
+  }
+};
+let drive;
+const driveFolder = {
+  getId: () => 'folder1',
+  createFile: blob => {
+    const id = 'file' + (drive.files.length + 1);
+    const f = { blob, sharing: null, getId: () => id, getUrl: () => 'https://drive.google.com/file/d/' + id + '/view',
+      setSharing(a, p) { if (drive.blockSharing) throw new Error('blocked'); f.sharing = a + ':' + p; } };
+    drive.files.push(f); return f;
+  }
 };
 const GS = new Function(...Object.keys(G), src + `
   return { doPost, setupSheets, authorize, testLine, HEADERS, REBA_HEADERS, REBA_LEVEL_TEXT, LEVEL_TEXT };`)(...Object.values(G));
@@ -60,7 +80,40 @@ const REBA = {
   activity: { static: false, repeat: true, rapid: false }
 };
 
-beforeEach(() => { sheets = {}; pushes = []; props = { LINE_CHANNEL_ACCESS_TOKEN: 't', LINE_TO: 'u' }; });
+beforeEach(() => {
+  sheets = {}; pushes = []; drive = { folders: [], files: [], blockSharing: false };
+  props = { LINE_CHANNEL_ACCESS_TOKEN: 't', LINE_TO: 'u' };
+  G.PropertiesService.getScriptProperties = () => ({ getProperty: k => props[k], setProperty: (k, v) => { props[k] = v; } });
+});
+const JPEG = 'data:image/jpeg;base64,' + Buffer.from('fake-jpeg').toString('base64');
+
+test('image is saved to Drive, linked in the last column and attached to the LINE alert', () => {
+  post({ ...REBA, image: JPEG, station: 'คลัง/B' });
+  assert.deepEqual(drive.folders, ['ErgoEye รูปประเมิน']);
+  assert.equal(props.IMAGE_FOLDER_ID, 'folder1');
+  const f = drive.files[0];
+  assert.equal(f.blob.type, 'image/jpeg'); assert.equal(f.blob.bytes.toString(), 'fake-jpeg');
+  assert.equal(f.blob.name, 'REBA_20261024_150000_คลัง-B.jpg');
+  assert.equal(f.sharing, 'ANYONE_WITH_LINK:VIEW');
+  assert.equal(sheets.REBA.rows[0].at(-1), '=HYPERLINK("https://drive.google.com/file/d/file1/view","ดูรูป")');
+  const msgs = pushes[0].messages;
+  assert.equal(msgs.length, 2);
+  assert.deepEqual(msgs[1], { type: 'image', originalContentUrl: 'https://lh3.googleusercontent.com/d/file1', previewImageUrl: 'https://lh3.googleusercontent.com/d/file1' });
+  // second upload reuses the folder
+  post({ ...RULA, image: JPEG });
+  assert.equal(drive.folders.length, 1);
+  assert.match(sheets.RULA.rows[0].at(-1), /file2/);
+});
+
+test('no image: blank picture cell and text-only LINE; blocked sharing keeps the sheet link only', () => {
+  post(REBA);
+  assert.equal(sheets.REBA.rows[0].at(-1), ''); assert.equal(pushes[0].messages.length, 1);
+  drive.blockSharing = true;
+  post({ ...REBA, image: JPEG });
+  assert.match(sheets.REBA.rows[1].at(-1), /HYPERLINK/); assert.equal(pushes[1].messages.length, 1);
+  post({ ...REBA, image: 'not-an-image' });
+  assert.equal(sheets.REBA.rows[2].at(-1), ''); assert.equal(drive.files.length, 1);
+});
 
 test('no method field goes to the RULA tab with the original columns', () => {
   const { method, ...old } = { ...RULA };
@@ -68,7 +121,7 @@ test('no method field goes to the RULA tab with the original columns', () => {
   assert.deepEqual(Object.keys(sheets), ['RULA']);
   const row = sheets.RULA.rows[0];
   assert.equal(row.length, GS.HEADERS.length);
-  assert.deepEqual(row.slice(1), ['คลัง B', 'ยกกล่อง', 'จป. สมชาย', 5, '3 – ควรปรับปรุงเร็ว ๆ นี้', 'ขวา', 3, 2, 1, 3, 4, 1, 4, 5, 70, 10, null, 30, 70, '2-10 กก. เป็นครั้งคราว', 'ใช่']);
+  assert.deepEqual(row.slice(1), ['คลัง B', 'ยกกล่อง', 'จป. สมชาย', 5, '3 – ควรปรับปรุงเร็ว ๆ นี้', 'ขวา', 3, 2, 1, 3, 4, 1, 4, 5, 70, 10, null, 30, 70, '2-10 กก. เป็นครั้งคราว', 'ใช่', '']);
   assert.deepEqual(sheets.RULA.header, GS.HEADERS);
 });
 
@@ -83,7 +136,7 @@ test('REBA row has its own columns and a plain-hyphen level text', () => {
   assert.deepEqual(sheets.REBA.header, GS.REBA_HEADERS);
   assert.equal(row.length, GS.REBA_HEADERS.length);
   assert.deepEqual(row.slice(1), ['คลัง B', 'ยกกล่อง', 'จป. สมชาย', 11, '5 - สูงมาก ต้องแก้ไขทันที', 'ซ้าย',
-    4, 2, 2, 3, 2, 1, 8, 5, 10, 70, 30, 50, 70, 10, '> 10 กก. + แรงกระแทก', 'พอใช้', 'ทำซ้ำเกิน 4 ครั้งต่อนาที']);
+    4, 2, 2, 3, 2, 1, 8, 5, 10, 70, 30, 50, 70, 10, '> 10 กก. + แรงกระแทก', 'พอใช้', 'ทำซ้ำเกิน 4 ครั้งต่อนาที', '']);
   for (const t of Object.values(GS.REBA_LEVEL_TEXT)) assert.match(t, /^[1-5] - [฀-๿ ]+$/, t);
   assert.equal(post({ ...REBA, risk: undefined, final: 9 }).ok, true);
   assert.equal(sheets.REBA.rows[1][5], '4 - สูง ต้องแก้ไขโดยเร็ว');

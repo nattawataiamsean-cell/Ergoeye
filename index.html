@@ -329,6 +329,13 @@ footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
             </div>
             <div class="field"><label for="fHook">ส่งผลเข้า Google Sheet และแจ้งเตือน LINE (ลิงก์ Apps Script)</label>
               <input type="url" id="fHook" placeholder="https://script.google.com/macros/s/…/exec"></div>
+            <div class="field"><label for="fSendImg">ส่งรูปท่าที่ประเมินไปด้วย</label>
+              <select id="fSendImg">
+                <option value="skeleton">โครงร่างอย่างเดียว ไม่เห็นหน้า</option>
+                <option value="photo">ภาพจริงพร้อมโครงร่าง</option>
+                <option value="none">ไม่ส่งรูป</option>
+              </select></div>
+            <p class="hint" style="margin:0">รูปจะเก็บใน Google Drive ของเจ้าของ Apps Script ลิงก์อยู่ในชีต และส่งเข้า LINE ตอนแจ้งเตือน ภาพจริงจะเห็นหน้าพนักงาน ใช้เมื่อได้รับความยินยอมแล้ว</p>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn" id="btnCalib" type="button" disabled>ปรับเทียบท่ายืนตรง</button>
               <button class="btn ghost" id="btnResetCalib" type="button">ล้างค่าปรับเทียบ</button>
@@ -791,7 +798,7 @@ function opts() {
 const assess = w => method === 'REBA' ? computeREBA(w, opts()) : computeRULA(w, opts());
 const SCORE_SELECTS = ['fLoad', 'fSide', 'fWrist', 'fRebaLoad', 'fCoupling'];
 const SCORE_CHECKS = ['fMuscle', 'fLegs', 'fShoulder', 'fArmSup', 'fWristDev', 'fShock', 'fActStatic', 'fActRepeat', 'fActRapid', 'fUnstable', 'fSitting'];
-['fStation', 'fTask', 'fAssessor', 'fHook', 'fAlert', ...SCORE_SELECTS].forEach(id => {
+['fStation', 'fTask', 'fAssessor', 'fHook', 'fAlert', 'fSendImg', ...SCORE_SELECTS].forEach(id => {
   const v = store.get('f:' + id, null); if (v != null) $(id).value = v;
   if ($(id).tagName === 'SELECT' && $(id).selectedIndex < 0) $(id).selectedIndex = 0; // stale stored value
   $(id).addEventListener('change', () => store.set('f:' + id, $(id).value));
@@ -978,18 +985,17 @@ function recompute() {
 }
 
 // ---- skeleton drawing ----
-function drawSkeleton(lm, r) {
+function drawSkeleton(lm, r, g = ctx, W = canvas.width, H = canvas.height) {
   if (!lm) return;
   const C = SEV_COLOR();
-  const W = canvas.width, H = canvas.height;
   const pt = i => ({ x: (mirrored ? 1 - lm[i].x : lm[i].x) * W, y: lm[i].y * H });
   const midp = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   const lw = Math.max(4, W / 160);
   const seg = (a, b, color, width = lw) => {
-    ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = width + 4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    ctx.strokeStyle = color; ctx.lineWidth = width;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    g.strokeStyle = 'rgba(0,0,0,.55)'; g.lineWidth = width + 4; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+    g.strokeStyle = color; g.lineWidth = width;
+    g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
   };
   const grey = 'rgba(255,255,255,.75)';
   // legs: grey in RULA (entered by the assessor), coloured by the leg score in REBA
@@ -1005,23 +1011,23 @@ function drawSkeleton(lm, r) {
     const [sh, el, wr, ix] = side === 'left' ? [11, 13, 15, 19] : [12, 14, 16, 20];
     const active = r.arm.side === side;
     const alpha = active ? 1 : .45;
-    ctx.globalAlpha = alpha;
+    g.globalAlpha = alpha;
     seg(pt(sh), pt(el), C[sevOf('upper', a.upper)]);
     seg(pt(el), pt(wr), C[sevOf('lower', a.lower)]);
     seg(pt(wr), pt(ix), C[sevOf('wrist', a.wrist)], lw * .7);
-    ctx.globalAlpha = 1;
+    g.globalAlpha = 1;
   });
   // joints
   [0, 7, 8, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach(i => {
     const p = pt(i);
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, lw * .6, 0, Math.PI * 2); ctx.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(p.x, p.y, lw * .6, 0, Math.PI * 2); g.fill();
   });
   // angle labels on the active side
   const label = (p, txt) => {
-    ctx.font = `600 ${Math.max(13, W / 55)}px "Plus Jakarta Sans", "Noto Sans Thai", system-ui, sans-serif`;
-    const m = ctx.measureText(txt), pad = 6, h = Math.max(13, W / 55) + 8;
-    ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(p.x + 10, p.y - h / 2, m.width + pad * 2, h);
-    ctx.fillStyle = '#fff'; ctx.fillText(txt, p.x + 10 + pad, p.y + h / 2 - 7);
+    g.font = `600 ${Math.max(13, W / 55)}px "Plus Jakarta Sans", "Noto Sans Thai", system-ui, sans-serif`;
+    const m = g.measureText(txt), pad = 6, h = Math.max(13, W / 55) + 8;
+    g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect(p.x + 10, p.y - h / 2, m.width + pad * 2, h);
+    g.fillStyle = '#fff'; g.fillText(txt, p.x + 10 + pad, p.y + h / 2 - 7);
   };
   const s = r.arm.side === 'left' ? [11, 13] : [12, 14];
   label(pt(s[0]), Math.round(r.parts.upper.angle) + '°');
@@ -1182,6 +1188,20 @@ function renderRecords() {
 const recMethod = r => r.method === 'REBA' ? 'REBA' : 'RULA';
 const recLevel = r => recMethod(r) === 'REBA' ? r.risk : r.level;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// image sent to Apps Script: 'skeleton' shows only the stick figure (no face), 'photo' is the camera frame with the skeleton
+function evidenceImage(r, final, mode) {
+  const W = 640, H = Math.round(canvas.height * W / canvas.width);
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const g = c.getContext('2d');
+  if (mode === 'photo') g.drawImage(canvas, 0, 0, W, H);
+  else { g.fillStyle = '#0E1022'; g.fillRect(0, 0, W, H); drawSkeleton(lastLm2d, r, g, W, H); }
+  const lv = levelOf(final, r.method), C = SEV_COLOR();
+  g.fillStyle = C[lv]; g.fillRect(0, 0, W, 44);
+  g.fillStyle = lv === 2 ? '#18263A' : '#FFFFFF';
+  g.font = '700 22px "Plus Jakarta Sans", "Noto Sans Thai", sans-serif'; g.textBaseline = 'middle';
+  g.fillText(`${r.method} ${final} · ${LEVEL_TXT[r.method][lv][0].split('·')[1].trim()}`, 14, 23);
+  return c.toDataURL('image/jpeg', .82);
+}
 $('btnSnap').onclick = async () => {
   if (!lastResult) { toast('ยังไม่พบท่าทางในภาพ ขยับให้เห็นทั้งตัว'); return; }
   const r = lastResult, final = running ? median(recent) : r.final;
@@ -1213,6 +1233,8 @@ $('btnSnap').onclick = async () => {
   const hook = $('fHook').value.trim();
   if (hook) {
     const { img, ...data } = rec;
+    const sendImg = $('fSendImg').value;
+    if (sendImg === 'skeleton' || sendImg === 'photo') data.image = evidenceImage(r, final, sendImg);
     try {
       await fetch(hook, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(data) });
       toast('บันทึกท่าแล้ว และส่งเข้า Google Sheet แล้ว');

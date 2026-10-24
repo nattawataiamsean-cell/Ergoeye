@@ -8,12 +8,16 @@
  * Script Properties ที่ต้องมี (สำหรับ LINE):
  *   LINE_CHANNEL_ACCESS_TOKEN = โทเคนจาก LINE Developers (Messaging API)
  *   LINE_TO                   = userId หรือ groupId ที่จะรับแจ้งเตือน
+ *
+ * รูปที่แอปส่งมา (field image) เก็บในโฟลเดอร์ Google Drive "ErgoEye รูปประเมิน"
+ * ลิงก์อยู่คอลัมน์สุดท้ายของชีต และแนบไปกับข้อความ LINE
  */
 
 const RULA_SHEET = 'RULA';
 const REBA_SHEET = 'REBA';
 const LINE_ALERT_LEVEL = 3;       // RULA: แจ้ง LINE เมื่อระดับการแก้ไขตั้งแต่ 3 (RULA 5 ขึ้นไป)
 const REBA_LINE_ALERT_SCORE = 8;  // REBA: แจ้ง LINE เมื่อคะแนนตั้งแต่ 8 (ความเสี่ยงสูงขึ้นไป)
+const IMAGE_FOLDER = 'ErgoEye รูปประเมิน';
 
 // ---------- RULA (คอลัมน์และข้อความเหมือนเวอร์ชันเดิม) ----------
 const LEVEL_TEXT = {
@@ -25,7 +29,7 @@ const LEVEL_TEXT = {
 
 const HEADERS = ['เวลา', 'จุดงาน', 'งาน', 'ผู้ประเมิน', 'คะแนน RULA', 'ระดับการแก้ไข', 'แขนที่ประเมิน',
   'ต้นแขน', 'ปลายแขน', 'ข้อมือ', 'คอ', 'ลำตัว', 'ขา', 'คะแนน C', 'คะแนน D',
-  'มุมต้นแขน (°)', 'มุมศอก (°)', 'มุมข้อมือ (°)', 'มุมคอ (°)', 'มุมลำตัว (°)', 'น้ำหนัก/แรง', 'ค้างท่า/ทำซ้ำ'];
+  'มุมต้นแขน (°)', 'มุมศอก (°)', 'มุมข้อมือ (°)', 'มุมคอ (°)', 'มุมลำตัว (°)', 'น้ำหนัก/แรง', 'ค้างท่า/ทำซ้ำ', 'รูป'];
 
 const LOAD_TEXT = {
   0: '< 2 กก. เป็นครั้งคราว',
@@ -47,7 +51,7 @@ const REBA_LEVEL_TEXT = {
 const REBA_HEADERS = ['เวลา', 'จุดงาน', 'งาน', 'ผู้ประเมิน', 'คะแนน REBA', 'ระดับความเสี่ยง', 'แขนที่ประเมิน',
   'ลำตัว', 'คอ', 'ขา', 'ต้นแขน', 'ปลายแขน', 'ข้อมือ', 'คะแนน A', 'คะแนน B', 'คะแนน Table C',
   'มุมลำตัว (°, ติดลบ = แอ่นหลัง)', 'มุมคอ (°, ติดลบ = เงยหน้า)', 'มุมเข่า (°)', 'มุมต้นแขน (°)', 'มุมศอก (°)',
-  'น้ำหนัก/แรง', 'การจับ', 'กิจกรรม'];
+  'น้ำหนัก/แรง', 'การจับ', 'กิจกรรม', 'รูป'];
 
 const REBA_LOAD_TEXT = {
   0: '< 5 กก.',
@@ -67,15 +71,52 @@ function doPost(e) {
   const d = JSON.parse(e.postData.contents);
   const method = String(d.method || 'RULA').toUpperCase() === 'REBA' ? 'REBA' : 'RULA';
 
+  const img = saveImage_(d, method);
+  const imgCell = img ? '=HYPERLINK("' + img.url + '","ดูรูป")' : '';
+
   if (method === 'REBA') {
-    getSheet_(REBA_SHEET, REBA_HEADERS).appendRow(rebaRow_(d));
-    if (Number(d.final) >= REBA_LINE_ALERT_SCORE) pushLine_(rebaMessage_(d));
+    getSheet_(REBA_SHEET, REBA_HEADERS).appendRow(rebaRow_(d).concat([imgCell]));
+    if (Number(d.final) >= REBA_LINE_ALERT_SCORE) pushLine_(rebaMessage_(d), img);
   } else {
-    getSheet_(RULA_SHEET, HEADERS).appendRow(rulaRow_(d));
-    if (d.level >= LINE_ALERT_LEVEL) pushLine_(rulaMessage_(d));
+    getSheet_(RULA_SHEET, HEADERS).appendRow(rulaRow_(d).concat([imgCell]));
+    if (d.level >= LINE_ALERT_LEVEL) pushLine_(rulaMessage_(d), img);
   }
   return ContentService.createTextOutput(JSON.stringify({ ok: true, method: method }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * เก็บรูปจากแอป (data URL แบบ base64) ลง Google Drive
+ * คืน { url: ลิงก์เปิดดูใน Drive, direct: ลิงก์ไฟล์รูปตรงสำหรับ LINE, shared } หรือ null ถ้าไม่มีรูป
+ */
+function saveImage_(d, method) {
+  const m = /^data:(image\/(?:jpeg|png));base64,(.+)$/.exec(String(d.image || ''));
+  if (!m) return null;
+  try {
+    const when = Utilities.formatDate(new Date(d.time || Date.now()), Session.getScriptTimeZone(), 'yyyyMMdd_HHmmss');
+    const station = String(d.station || '').replace(/[\\/:*?"<>|]/g, '-').slice(0, 40);
+    const name = method + '_' + when + (station ? '_' + station : '') + (m[1] === 'image/png' ? '.png' : '.jpg');
+    const file = imageFolder_().createFile(Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], name));
+    let shared = true;
+    // LINE ต้องเปิดรูปได้โดยไม่ล็อกอิน จึงแชร์แบบทุกคนที่มีลิงก์ดูได้ (บางองค์กรปิดสิทธิ์นี้ไว้)
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (err) { shared = false; }
+    return { url: file.getUrl(), direct: 'https://lh3.googleusercontent.com/d/' + file.getId(), shared: shared };
+  } catch (err) {
+    console.error('บันทึกรูปไม่สำเร็จ: ' + err);
+    return null;
+  }
+}
+
+/** โฟลเดอร์เก็บรูป สร้างครั้งแรกแล้วจำ id ไว้ใน Script Properties */
+function imageFolder_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('IMAGE_FOLDER_ID');
+  if (id) {
+    try { return DriveApp.getFolderById(id); } catch (err) { /* โฟลเดอร์ถูกลบ สร้างใหม่ */ }
+  }
+  const folder = DriveApp.createFolder(IMAGE_FOLDER);
+  props.setProperty('IMAGE_FOLDER_ID', folder.getId());
+  return folder;
 }
 
 /** แถว RULA: ลำดับคอลัมน์เหมือนเวอร์ชันเดิม */
@@ -195,18 +236,20 @@ function rebaMessage_(d) {
     'ประเมินโดย ' + (d.assessor || '-') + ' ผ่าน ErgoEye';
 }
 
-/** ส่งแจ้งเตือน LINE */
-function pushLine_(text) {
+/** ส่งแจ้งเตือน LINE (ข้อความ และรูปถ้ามี ส่งในครั้งเดียวกันจึงนับเป็น 1 ข้อความในโควตา) */
+function pushLine_(text, img) {
   const p = PropertiesService.getScriptProperties();
   const token = p.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   const to = p.getProperty('LINE_TO');
   if (!token || !to) return;
 
+  const messages = [{ type: 'text', text: text }];
+  if (img && img.shared) messages.push({ type: 'image', originalContentUrl: img.direct, previewImageUrl: img.direct });
   UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post',
     contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify({ to: to, messages: [{ type: 'text', text: text }] }),
+    payload: JSON.stringify({ to: to, messages: messages }),
     muteHttpExceptions: true
   });
 }
