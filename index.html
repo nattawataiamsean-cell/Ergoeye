@@ -3,142 +3,206 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ErgoEye — ประเมินท่าทางการทำงานด้วย AI (RULA)</title>
+<title>ErgoEye — ประเมินท่าทางการทำงานด้วย AI (RULA / REBA)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme: light;
-  --paper:#EDF0F3; --surface:#FFFFFF; --ink:#18263A; --muted:#5B6878; --line:#C9D1DA;
-  --hazard:#F2B705; --hazard-ink:#18263A;
-  --l1:#2E9E5B; --l2:#D9A400; --l3:#E06A1B; --l4:#C62828;
-  --stage:#000;
-  --radius-lg:14px; --radius-sm:8px;
+  --bg:#F4F3FB; --paper:#F1F0F9; --surface:rgba(255,255,255,.72); --surface-solid:#FFFFFF;
+  --tile:rgba(255,255,255,.78); --glass-border:rgba(255,255,255,.9);
+  --ink:#14162B; --muted:#6B6F85; --line:rgba(20,22,43,.09);
+  --accent:#7C5CFC; --accent-2:#5B8DEF; --accent-soft:#EFEAFF; --accent-ink:#5B3FE0;
+  --blob-1:#E4DCFF; --blob-2:#DCE8FF; --blob-3:#F3E6FF;
+  --shadow:0 1px 2px rgba(20,22,43,.04), 0 18px 40px -18px rgba(76,61,140,.28);
+  --l1:#2E9E5B; --l2:#D9A400; --l3:#E06A1B; --l4:#C62828; --l5:#7A1212;
+  --stage:#0E1022;
+  --radius-lg:24px; --radius-md:16px; --radius-sm:12px;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     color-scheme: dark;
-    --paper:#101A27; --surface:#172435; --ink:#E6ECF2; --muted:#9AA8B8; --line:#2A3B50;
-    --l2:#E8B820;
+    --bg:#0C0E1B; --paper:#171A2E; --surface:rgba(26,29,50,.72); --surface-solid:#1C1F36;
+    --tile:rgba(255,255,255,.04); --glass-border:rgba(255,255,255,.07);
+    --ink:#ECEDF7; --muted:#9DA1BC; --line:rgba(255,255,255,.09);
+    --accent:#9D88FF; --accent-2:#7FA6FF; --accent-soft:rgba(157,136,255,.15); --accent-ink:#BBAEFF;
+    --blob-1:#261E4F; --blob-2:#13234A; --blob-3:#2A1740;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 18px 40px -18px rgba(0,0,0,.6);
+    --l2:#E8B820; --l5:#9E1C1C;
   }
 }
 :root[data-theme="dark"]{
   color-scheme: dark;
-  --paper:#101A27; --surface:#172435; --ink:#E6ECF2; --muted:#9AA8B8; --line:#2A3B50; --l2:#E8B820;
+  --bg:#0C0E1B; --paper:#171A2E; --surface:rgba(26,29,50,.72); --surface-solid:#1C1F36;
+  --tile:rgba(255,255,255,.04); --glass-border:rgba(255,255,255,.07);
+  --ink:#ECEDF7; --muted:#9DA1BC; --line:rgba(255,255,255,.09);
+  --accent:#9D88FF; --accent-2:#7FA6FF; --accent-soft:rgba(157,136,255,.15); --accent-ink:#BBAEFF;
+  --blob-1:#261E4F; --blob-2:#13234A; --blob-3:#2A1740;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 18px 40px -18px rgba(0,0,0,.6);
+  --l2:#E8B820; --l5:#9E1C1C;
 }
+[hidden]{display:none !important}
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI","Noto Sans Thai",Tahoma,sans-serif;
-  font-size:16px;line-height:1.55}
+body{margin:0;color:var(--ink);
+  background:
+    radial-gradient(900px 520px at 88% -8%, var(--blob-1) 0%, transparent 62%),
+    radial-gradient(760px 480px at -8% 28%, var(--blob-2) 0%, transparent 60%),
+    radial-gradient(700px 420px at 60% 105%, var(--blob-3) 0%, transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+  font-family:"Plus Jakarta Sans","Noto Sans Thai",system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
-:focus-visible{outline:3px solid var(--hazard);outline-offset:2px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
-header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 20px 10px;max-width:1240px;margin:0 auto}
-.brand{font-weight:700;font-size:1.5rem;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
-.brand .eye{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--hazard);position:relative;flex:none}
-.brand .eye::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--ink)}
-.tagline{color:var(--muted);font-size:.95rem}
-.privacy{margin-left:auto;font-size:.85rem;color:var(--muted)}
+/* glass surface shared by header and panels */
+header.top,section.panel{background:var(--surface);border:1px solid var(--glass-border);box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);backdrop-filter:blur(18px) saturate(140%)}
 
-main{max-width:1240px;margin:0 auto;padding:0 20px 40px;display:grid;gap:20px;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
-@media (max-width:900px){main{grid-template-columns:1fr;padding:0 12px 32px}header.top{padding:12px 12px 8px}.privacy{margin-left:0;width:100%}}
+header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;max-width:1240px;margin:16px auto 22px;
+  padding:10px 12px 10px 18px;border-radius:999px;width:calc(100% - 40px)}
+.brand{font-weight:800;font-size:1.3rem;letter-spacing:-.02em;display:flex;align-items:center;gap:10px}
+.brand .eye{display:inline-block;width:28px;height:28px;border-radius:50%;flex:none;position:relative;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 6px 16px -6px var(--accent)}
+.brand .eye::after{content:"";position:absolute;inset:9px;border-radius:50%;background:#fff}
+.tagline{color:var(--muted);font-size:.92rem}
+.privacy{margin-left:auto;font-size:.8rem;font-weight:500;color:var(--accent-ink);background:var(--accent-soft);
+  padding:6px 14px;border-radius:999px}
+
+main{max-width:1240px;margin:0 auto;padding:0 20px 40px;display:grid;gap:22px;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}
+@media (max-width:900px){
+  main{grid-template-columns:minmax(0,1fr);padding:0 16px 32px}
+  header.top{border-radius:20px;width:calc(100% - 32px);margin:12px auto 16px;padding:12px 16px}
+  .privacy{margin-left:0}
+}
 
 /* ---------- Stage ---------- */
-.stage{position:relative;background:var(--stage);border-radius:var(--radius-lg);overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
+.stage{position:relative;border-radius:var(--radius-lg);overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(520px 300px at 75% 15%, rgba(124,92,252,.38), transparent 62%),
+             radial-gradient(420px 260px at 10% 95%, rgba(91,141,239,.28), transparent 60%), var(--stage);
+  box-shadow:var(--shadow);border:1px solid var(--glass-border)}
 .stage canvas{width:100%;height:100%;object-fit:contain;display:block}
 .stage video{display:none}
-.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#C9D1DA;text-align:center;padding:24px}
-.empty strong{color:#fff;font-size:1.15rem;font-weight:600}
-.status{position:absolute;left:12px;top:12px;background:rgba(0,0,0,.6);color:#fff;font-size:.85rem;padding:4px 10px;border-radius:999px}
+.empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#C4C7DD;text-align:center;padding:24px 100px 24px 24px}
+.empty strong{color:#fff;font-size:1.25rem;font-weight:700;letter-spacing:-.01em}
+.status{position:absolute;left:14px;top:14px;background:rgba(14,16,34,.55);color:#fff;font-size:.82rem;padding:5px 12px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.14);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 
 /* the score ladder: the one bold element */
-.ladder{position:absolute;right:12px;top:12px;bottom:12px;width:74px;display:flex;flex-direction:column-reverse;gap:4px}
-.rung{flex:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;
-  color:rgba(255,255,255,.55);background:rgba(255,255,255,.08);transition:transform .15s ease, background .15s ease}
+.ladder{position:absolute;right:14px;top:14px;bottom:14px;width:74px;display:flex;flex-direction:column-reverse;gap:5px}
+.rung{flex:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;
+  color:rgba(255,255,255,.6);background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:transform .15s ease, background .15s ease}
 .rung[data-l="1"].on{background:var(--l1);color:#fff}
 .rung[data-l="2"].on{background:var(--l2);color:#18263A}
 .rung[data-l="3"].on{background:var(--l3);color:#fff}
 .rung[data-l="4"].on{background:var(--l4);color:#fff}
-.rung.current{transform:scaleX(1.18);font-size:1.9rem;box-shadow:0 0 0 3px #fff inset}
-.verdict{position:absolute;left:12px;right:98px;bottom:12px;background:rgba(0,0,0,.66);color:#fff;border-radius:10px;padding:10px 14px;display:none}
+.rung[data-l="5"].on{background:var(--l5);color:#fff}
+.rung.current{transform:scaleX(1.18);font-size:1.9rem;box-shadow:0 0 0 3px #fff inset, 0 8px 22px -8px rgba(0,0,0,.6)}
+/* REBA: 5 risk bands, each labelled with its score range */
+.ladder[data-m="REBA"] .rung{flex-direction:column;line-height:1.05;font-size:.85rem}
+.ladder[data-m="REBA"] .rung.current{font-size:1.9rem}
+.rung .rg{display:block;font-size:.85rem;font-weight:600}
+.rung.current .rg{font-size:.7rem}
+.verdict{position:absolute;left:14px;right:100px;bottom:14px;background:rgba(14,16,34,.6);color:#fff;border-radius:16px;padding:12px 16px;display:none;
+  border:1px solid rgba(255,255,255,.14);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .verdict.show{display:block}
 .verdict b{font-size:1.05rem}
-.verdict small{display:block;color:#C9D1DA}
+.verdict small{display:block;color:#C4C7DD}
 
 .alarm{position:absolute;left:0;right:0;top:0;background:var(--l4);color:#fff;font-weight:600;padding:10px 16px;text-align:center;transform:translateY(-100%);transition:transform .2s ease}
 .alarm.show{transform:none}
-@media (prefers-reduced-motion:reduce){.rung,.alarm{transition:none}}
+@media (prefers-reduced-motion:reduce){.rung,.alarm,.btn{transition:none}}
 
-.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius-sm);padding:9px 14px;cursor:pointer;font-weight:500;min-height:44px}
-.btn:hover{border-color:var(--ink)}
-.btn.primary{background:var(--hazard);color:var(--hazard-ink);border-color:var(--hazard);font-weight:600}
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.btn{border:1px solid var(--line);background:var(--surface-solid);border-radius:999px;padding:9px 18px;cursor:pointer;font-weight:600;font-size:.92rem;min-height:44px;
+  box-shadow:0 1px 2px rgba(20,22,43,.05);transition:border-color .15s ease, transform .15s ease}
+.btn:hover{border-color:var(--accent)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);box-shadow:0 10px 22px -10px rgba(20,22,43,.55)}
+.btn.primary:hover{border-color:var(--ink)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn.ghost{background:transparent}
+.btn.ghost{background:transparent;box-shadow:none}
 
 /* ---------- Panels ---------- */
-section.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:16px 18px}
-section.panel + section.panel{margin-top:16px}
-.panel h2{font-size:1.05rem;margin:0 0 4px;font-weight:600}
-.panel .hint{color:var(--muted);font-size:.88rem;margin:0 0 12px}
+section.panel{border-radius:var(--radius-lg);padding:20px 22px}
+section.panel + section.panel{margin-top:18px}
+.panel h2{font-size:1.08rem;margin:0 0 4px;font-weight:700;letter-spacing:-.01em}
+.panel .hint{color:var(--muted);font-size:.86rem;margin:0 0 14px}
 
-.parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.parts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 @media (max-width:520px){.parts{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.part{border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:relative;overflow:hidden}
-.part::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--line)}
+.part{border:1px solid var(--line);background:var(--tile);border-radius:var(--radius-md);padding:12px 14px 12px 16px;position:relative;overflow:hidden}
+.part::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:4px;border-radius:0 4px 4px 0;background:var(--line)}
 .part[data-sev="1"]::before{background:var(--l1)} .part[data-sev="2"]::before{background:var(--l2)}
 .part[data-sev="3"]::before{background:var(--l3)} .part[data-sev="4"]::before{background:var(--l4)}
-.part .name{font-size:.85rem;color:var(--muted)}
-.part .val{font-size:1.4rem;font-weight:700;line-height:1.2;font-variant-numeric:tabular-nums}
-.part .val small{font-size:.8rem;font-weight:500;color:var(--muted)}
-.part .ang{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.sums{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:.9rem;color:var(--muted)}
-.sums b{color:var(--ink);font-variant-numeric:tabular-nums}
+.part[data-sev="5"]::before{background:var(--l5)}
+.part .name{font-size:.82rem;color:var(--muted);font-weight:500}
+.part .val{font-size:1.5rem;font-weight:800;line-height:1.2;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.part .val small{font-size:.8rem;font-weight:500;color:var(--muted);letter-spacing:0}
+.part .ang{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.sums{display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:14px;font-size:.88rem;color:var(--muted)}
+.sums b{color:var(--accent-ink);font-variant-numeric:tabular-nums}
 
-.dist{display:flex;height:16px;border-radius:999px;overflow:hidden;background:var(--paper);margin:8px 0}
+.dist{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--paper);margin:10px 0}
 .dist span{display:block;height:100%}
-.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.85rem;color:var(--muted)}
-.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:0}
-#timeline{width:100%;height:120px;display:block;margin-top:8px}
-.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-.kv div{background:var(--paper);border-radius:10px;padding:8px 10px}
-.kv span{display:block;font-size:.8rem;color:var(--muted)}
-.kv b{font-size:1.2rem;font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:0}
+#timeline{width:100%;height:120px;display:block;margin-top:10px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.kv div{background:var(--tile);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px}
+.kv span{display:block;font-size:.78rem;color:var(--muted)}
+.kv b{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 
-form.settings{display:grid;gap:10px}
-.field{display:grid;gap:4px}
-.field label,.field .lab{font-size:.88rem;color:var(--muted)}
+form.settings{display:grid;gap:12px}
+.field{display:grid;gap:5px}
+.field label,.field .lab{font-size:.84rem;color:var(--muted);font-weight:500}
 .field input[type=text],.field input[type=url],.field input[type=number],.field select{
-  border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 10px;background:var(--paper);min-height:42px;width:100%}
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.check{display:flex;gap:10px;align-items:flex-start;font-size:.92rem;cursor:pointer}
-.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--ink);flex:none}
-details{border-top:1px solid var(--line);padding-top:10px}
-summary{cursor:pointer;font-weight:500}
+  border:1px solid var(--line);border-radius:var(--radius-sm);padding:8px 12px;background:var(--tile);min-height:44px;width:100%;
+  transition:border-color .15s ease, box-shadow .15s ease}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:.9rem;cursor:pointer}
+.check input{width:20px;height:20px;margin-top:2px;accent-color:var(--accent);flex:none}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-weight:600;color:var(--accent-ink)}
 
 .records{display:grid;gap:10px}
-.rec{display:grid;grid-template-columns:88px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px}
-.rec img{width:88px;height:66px;object-fit:cover;border-radius:6px;background:#000}
-.rec .t{font-weight:600;font-size:.95rem}
-.rec .m{font-size:.82rem;color:var(--muted)}
-.badge{font-weight:700;font-size:1.3rem;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
+.rec{display:grid;grid-template-columns:88px 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);background:var(--tile);border-radius:var(--radius-md);padding:8px 10px 8px 8px}
+.rec img{width:88px;height:66px;object-fit:cover;border-radius:10px;background:#000}
+.rec .t{font-weight:700;font-size:.94rem}
+.rec .m{font-size:.8rem;color:var(--muted)}
+.badge{font-weight:800;font-size:1.3rem;width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#fff}
 .badge[data-l="1"]{background:var(--l1)} .badge[data-l="2"]{background:var(--l2);color:#18263A}
 .badge[data-l="3"]{background:var(--l3)} .badge[data-l="4"]{background:var(--l4)}
-.emptyrec{color:var(--muted);font-size:.9rem;border:1px dashed var(--line);border-radius:10px;padding:14px;text-align:center}
-.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-size:.92rem;opacity:0;pointer-events:none;transition:opacity .2s}
+.badge[data-l="5"]{background:var(--l5)}
+.tag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;padding:1px 8px;border-radius:999px;color:var(--accent-ink);background:var(--accent-soft);margin-right:6px;vertical-align:2px}
+
+/* method switch: pill segmented control */
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:999px;background:var(--paper);border:1px solid var(--line)}
+.seg button{border:0;background:transparent;min-height:40px;padding:6px 10px;border-radius:999px;font-weight:700;cursor:pointer;color:var(--muted);letter-spacing:.02em}
+.seg button[aria-pressed="true"]{background:var(--surface-solid);color:var(--accent-ink);box-shadow:0 2px 8px -2px rgba(76,61,140,.3)}
+.method-note{font-size:.84rem;color:var(--muted);margin:8px 2px 16px}
+.group{display:grid;gap:12px}
+.group-title{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:4px 0 -4px}
+
+.emptyrec{color:var(--muted);font-size:.88rem;border:1.5px dashed var(--line);border-radius:var(--radius-md);padding:16px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(20,22,43,.88);color:#fff;
+  padding:10px 18px;border-radius:999px;font-size:.9rem;opacity:0;pointer-events:none;transition:opacity .2s;
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .toast.show{opacity:1}
-footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.82rem}
+footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);font-size:.8rem;text-align:center}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="brand"><span class="eye" aria-hidden="true"></span>ErgoEye</div>
-  <div class="tagline">ประเมินความเสี่ยงท่าทางการทำงานแบบ RULA ด้วยกล้องมือถือ</div>
+  <div class="tagline">ประเมินความเสี่ยงท่าทางการทำงานแบบ RULA และ REBA ด้วยกล้องมือถือ</div>
   <div class="privacy">ประมวลผลบนเครื่องนี้เท่านั้น ไม่มีการส่งหรือเก็บวิดีโอ</div>
 </header>
 
@@ -174,14 +238,9 @@ footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
 
     <section class="panel">
       <h2>สรุปช่วงการประเมินนี้</h2>
-      <p class="hint">สัดส่วนเวลาที่อยู่ในแต่ละระดับการแก้ไข (Action Level) ตั้งแต่เปิดกล้อง</p>
+      <p class="hint" id="distHint">สัดส่วนเวลาที่อยู่ในแต่ละระดับการแก้ไข (Action Level) ตั้งแต่เปิดกล้อง</p>
       <div class="dist" id="dist"></div>
-      <div class="legend">
-        <span><i style="background:var(--l1)"></i>ระดับ 1 ยอมรับได้</span>
-        <span><i style="background:var(--l2)"></i>ระดับ 2 ควรศึกษาเพิ่ม</span>
-        <span><i style="background:var(--l3)"></i>ระดับ 3 ปรับปรุงเร็ว ๆ นี้</span>
-        <span><i style="background:var(--l4)"></i>ระดับ 4 ปรับปรุงทันที</span>
-      </div>
+      <div class="legend" id="legend"></div>
       <canvas id="timeline" width="800" height="120" aria-label="กราฟคะแนน RULA ตามเวลา"></canvas>
       <div class="kv">
         <div><span>ระยะเวลา</span><b id="kDur">0:00</b></div>
@@ -193,14 +252,36 @@ footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
 
   <div>
     <section class="panel">
+      <div class="seg" id="methodSeg" role="group" aria-label="วิธีประเมิน">
+        <button type="button" data-m="RULA" aria-pressed="true">RULA</button>
+        <button type="button" data-m="REBA" aria-pressed="false">REBA</button>
+      </div>
+      <p class="method-note">RULA เหมาะกับงานนั่งที่ใช้แขนเป็นหลัก ส่วน REBA เหมาะกับงานที่ใช้ทั้งตัว เช่น ยกของ</p>
       <h2>ข้อมูลงานที่ประเมิน</h2>
-      <p class="hint">ส่วนที่กล้องมองไม่เห็น ให้ผู้ประเมินกรอกเอง ตามแบบประเมิน RULA ขั้นที่ 7–8 และ 14–15</p>
+      <p class="hint" id="formHint">ส่วนที่กล้องมองไม่เห็น ให้ผู้ประเมินกรอกเอง ตามแบบประเมิน RULA ขั้นที่ 7–8 และ 14–15</p>
       <form class="settings" id="settings" onsubmit="return false">
         <div class="row2">
           <div class="field"><label for="fStation">จุดงาน / แผนก</label><input type="text" id="fStation" placeholder="เช่น คลังพัสดุ ชั้นวาง B"></div>
           <div class="field"><label for="fTask">งานที่ทำ</label><input type="text" id="fTask" placeholder="เช่น ยกกล่องเวชภัณฑ์ลงชั้นล่าง"></div>
         </div>
         <div class="row2">
+          <div class="field"><label for="fSide">แขนที่ประเมิน</label>
+            <select id="fSide">
+              <option value="auto">อัตโนมัติ (ข้างที่เห็นชัด/เสี่ยงกว่า)</option>
+              <option value="right">แขนขวาของผู้ถูกประเมิน</option>
+              <option value="left">แขนซ้ายของผู้ถูกประเมิน</option>
+            </select></div>
+          <div class="field"><label for="fWrist">ท่าข้อมือ</label>
+            <select id="fWrist">
+              <option value="straight">ตรง</option>
+              <option value="flex15">งอไม่เกิน 15°</option>
+              <option value="flexOver">งอเกิน 15°</option>
+              <option value="ai">ให้ AI ประเมิน (ทดลอง)</option>
+            </select></div>
+        </div>
+        <label class="check"><input type="checkbox" id="fWristDev">ข้อมือเบี่ยงหรือบิด</label>
+
+        <div class="group" data-method="RULA">
           <div class="field"><label for="fLoad">น้ำหนักหรือแรงที่ใช้</label>
             <select id="fLoad">
               <option value="0">น้อยกว่า 2 กก. เป็นครั้งคราว</option>
@@ -208,15 +289,35 @@ footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
               <option value="2">2–10 กก. ค้างไว้หรือทำซ้ำ</option>
               <option value="3">มากกว่า 10 กก. หรือมีแรงกระแทก</option>
             </select></div>
-          <div class="field"><label for="fSide">แขนที่ประเมิน</label>
-            <select id="fSide">
-              <option value="auto">อัตโนมัติ (ข้างที่เห็นชัด/เสี่ยงกว่า)</option>
-              <option value="right">แขนขวาของผู้ถูกประเมิน</option>
-              <option value="left">แขนซ้ายของผู้ถูกประเมิน</option>
-            </select></div>
+          <label class="check"><input type="checkbox" id="fMuscle">ค้างท่าเดิมเกิน 1 นาที หรือทำซ้ำมากกว่า 4 ครั้งต่อนาที</label>
+          <label class="check"><input type="checkbox" id="fLegs" checked>ขาและเท้ารองรับน้ำหนักสมดุลดี</label>
         </div>
-        <label class="check"><input type="checkbox" id="fMuscle">ค้างท่าเดิมเกิน 1 นาที หรือทำซ้ำมากกว่า 4 ครั้งต่อนาที</label>
-        <label class="check"><input type="checkbox" id="fLegs" checked>ขาและเท้ารองรับน้ำหนักสมดุลดี</label>
+
+        <div class="group" data-method="REBA" hidden>
+          <div class="row2">
+            <div class="field"><label for="fRebaLoad">น้ำหนักหรือแรงที่ใช้</label>
+              <select id="fRebaLoad">
+                <option value="0">น้อยกว่า 5 กก.</option>
+                <option value="1">5–10 กก.</option>
+                <option value="2">มากกว่า 10 กก.</option>
+              </select></div>
+            <div class="field"><label for="fCoupling">การจับ</label>
+              <select id="fCoupling">
+                <option value="0">ดี: มีที่จับเหมาะมือ</option>
+                <option value="1">พอใช้: จับได้แต่ไม่เหมาะ</option>
+                <option value="2">ไม่ดี: จับได้แต่ไม่ถนัด</option>
+                <option value="3">ยอมรับไม่ได้: ไม่มีที่จับ</option>
+              </select></div>
+          </div>
+          <label class="check"><input type="checkbox" id="fShock">มีแรงกระแทกหรือต้องออกแรงทันที</label>
+          <div class="group-title">กิจกรรม</div>
+          <label class="check"><input type="checkbox" id="fActStatic">ค้างท่าเดิมเกิน 1 นาที</label>
+          <label class="check"><input type="checkbox" id="fActRepeat">ทำซ้ำเกิน 4 ครั้งต่อนาที</label>
+          <label class="check"><input type="checkbox" id="fActRapid">เปลี่ยนท่ารวดเร็วมาก หรือพื้นไม่มั่นคง</label>
+          <div class="group-title">ขา</div>
+          <label class="check"><input type="checkbox" id="fUnstable">ยืนขาเดียวหรือไม่มั่นคง</label>
+          <label class="check"><input type="checkbox" id="fSitting">ทำงานในท่านั่ง</label>
+        </div>
         <details>
           <summary>ปรับเพิ่มเติม</summary>
           <div class="settings" style="display:grid;gap:10px;margin-top:10px">
@@ -250,11 +351,12 @@ footer{max-width:1240px;margin:0 auto;padding:0 20px 30px;color:var(--muted);fon
   </div>
 </main>
 <footer>
-  ErgoEye ใช้วิธี RULA (McAtamney &amp; Corlett, 1993) ร่วมกับ MediaPipe Pose Landmarker เป็นเครื่องมือคัดกรองเบื้องต้น ไม่ใช้แทนการประเมินโดยผู้เชี่ยวชาญด้านการยศาสตร์
+  ErgoEye ใช้วิธี RULA (McAtamney &amp; Corlett, 1993) และ REBA (Hignett &amp; McAtamney, 2000) ร่วมกับ MediaPipe Pose Landmarker เป็นเครื่องมือคัดกรองเบื้องต้น ไม่ใช้แทนการประเมินโดยผู้เชี่ยวชาญด้านการยศาสตร์
 </footer>
 <div class="toast" id="toast" role="status"></div>
 <script type="module">
-// ===== RULA engine (McAtamney & Corlett, 1993) =====
+// @engine-start  (tests/engine.test.mjs loads everything between the engine markers)
+// ===== Scoring engines: RULA (McAtamney & Corlett, 1993) + REBA (Hignett & McAtamney, 2000) =====
 const RULA_A = [ // [upperArm-1][lowerArm-1][(wrist-1)*2 + (twist-1)]
   [[1,2,2,2,2,3,3,3],[2,2,2,2,3,3,3,3],[2,3,3,3,3,3,4,4]],
   [[2,3,3,3,3,4,4,4],[3,3,3,3,3,4,4,4],[3,4,4,4,4,4,5,5]],
@@ -275,6 +377,35 @@ const RULA_C = [ // [min(A,8)-1][min(B,7)-1]
   [1,2,3,3,4,5,5],[2,2,3,4,4,5,5],[3,3,3,4,4,5,6],[3,3,3,4,5,6,6],
   [4,4,4,5,6,7,7],[4,4,5,6,6,7,7],[5,5,6,6,7,7,7],[5,5,6,7,7,7,7]
 ];
+const REBA_A = [ // [trunk-1][neck-1][legs-1]
+  [[1,2,3,4],[1,2,3,4],[3,3,5,6]],
+  [[2,3,4,5],[3,4,5,6],[4,5,6,7]],
+  [[2,4,5,6],[4,5,6,7],[5,6,7,8]],
+  [[3,5,6,7],[5,6,7,8],[6,7,8,9]],
+  [[4,6,7,8],[6,7,8,9],[7,8,9,9]]
+];
+const REBA_B = [ // [upperArm-1][lowerArm-1][wrist-1]
+  [[1,2,2],[1,2,3]],
+  [[1,2,3],[2,3,4]],
+  [[3,4,5],[4,5,5]],
+  [[4,5,5],[5,6,7]],
+  [[6,7,8],[7,8,8]],
+  [[7,8,8],[8,9,9]]
+];
+const REBA_C = [ // [scoreA-1][scoreB-1]
+  [1,1,1,2,3,3,4,5,6,7,7,7],
+  [1,2,2,3,4,4,5,6,6,7,7,8],
+  [2,3,3,3,4,5,6,7,7,8,8,8],
+  [3,4,4,4,5,6,7,8,8,9,9,9],
+  [4,4,4,5,6,7,8,8,9,9,9,9],
+  [6,6,6,7,8,8,9,9,10,10,10,10],
+  [7,7,7,8,9,9,9,10,10,11,11,11],
+  [8,8,8,9,10,10,10,10,10,11,11,11],
+  [9,9,9,10,10,10,11,11,11,12,12,12],
+  [10,10,10,11,11,11,11,12,12,12,12,12],
+  [11,11,11,11,12,12,12,12,12,12,12,12],
+  [12,12,12,12,12,12,12,12,12,12,12,12]
+];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // ---- vector helpers (3D) ----
@@ -289,17 +420,26 @@ const angle = (a, b) => Math.acos(clamp(dot(unit(a), unit(b)), -1, 1)) * 180 / M
 // remove component of v along axis n (n unit)
 const reject = (v, n) => sub(v, scale(n, dot(v, n)));
 
+// ---- risk levels ----
+const rulaLevel = s => s <= 2 ? 1 : s <= 4 ? 2 : s <= 6 ? 3 : 4;
+const rebaRisk = s => s <= 1 ? 1 : s <= 3 ? 2 : s <= 7 ? 3 : s <= 10 ? 4 : 5;
+
 /**
- * Compute RULA from MediaPipe world landmarks (y points DOWN, metres, hip-centred).
- * opts: { side:'auto'|'left'|'right', legsSupported, muscle, load(0..3), armSupported,
- *         shoulderRaised, offsets:{neck,trunk,wrist} }
+ * Wrist score. The assessor picks the posture by default because the AI wrist angle is unreliable.
+ * mode: 'straight' | 'flex15' (flexed up to 15°) | 'flexOver' (flexed over 15°) | 'ai' (use measured angle)
+ * dev: wrist deviated or twisted (+1 in both methods)
  */
-function computeRULA(lm, opts = {}) {
-  const o = Object.assign({ side: 'auto', legsSupported: true, muscle: false, load: 0,
-    armSupported: false, shoulderRaised: false, offsets: { neck: 0, trunk: 0, wrist: 0 } }, opts);
+function wristScore(method, mode, ang, dev) {
+  let base;
+  if (method === 'REBA') base = mode === 'ai' ? (ang <= 15 ? 1 : 2) : mode === 'flexOver' ? 2 : 1;
+  else base = mode === 'ai' ? (ang <= 5 ? 1 : ang <= 15 ? 2 : 3) : mode === 'flexOver' ? 3 : mode === 'flex15' ? 2 : 1;
+  return clamp(base + (dev ? 1 : 0), 1, method === 'REBA' ? 3 : 4);
+}
+
+// ---- shared posture geometry (MediaPipe world landmarks: y points DOWN, metres, hip-centred) ----
+function bodyFrame(lm) {
   const P = i => lm[i];
   const vis = i => (lm[i].visibility == null ? 1 : lm[i].visibility);
-
   const lSh = P(11), rSh = P(12), lHip = P(23), rHip = P(24);
   const midSh = mid(lSh, rSh), midHip = mid(lHip, rHip);
   const midEar = mid(P(7), P(8));
@@ -311,27 +451,86 @@ function computeRULA(lm, opts = {}) {
   let fwdRaw = sub(P(0), midEar);
   fwdRaw = reject(reject(fwdRaw, trunkU), rightAxis);
   const fwd = unit(fwdRaw);
-
-  // ---- Trunk ----
-  const trunkAng = Math.max(0, angle(trunkVec, up) - o.offsets.trunk);
+  return { P, vis, lSh, rSh, lHip, rHip, midSh, midHip, midEar, up, trunkVec, trunkU, rightAxis, fwd };
+}
+function trunkGeom(F, offTrunk) {
+  const { trunkVec, trunkU, up, fwd, rightAxis, lSh, rSh, lHip, rHip } = F;
+  const trunkAng = Math.max(0, angle(trunkVec, up) - offTrunk);
   const trunkSign = dot(trunkU, fwd) >= 0 ? 1 : -1; // + flexion
-  let trunk = trunkAng < 5 ? 1 : trunkAng <= 20 ? 2 : trunkAng <= 60 ? 3 : 4;
-  if (trunkSign < 0 && trunkAng >= 5) trunk = Math.max(trunk, 2); // extension
   const sideBend = Math.abs(Math.asin(clamp(dot(trunkU, unit({ x: rightAxis.x, y: 0, z: rightAxis.z })), -1, 1)) * 180 / Math.PI);
   const shLineH = { x: rSh.x - lSh.x, y: 0, z: rSh.z - lSh.z };
   const hipLineH = { x: rHip.x - lHip.x, y: 0, z: rHip.z - lHip.z };
   const twist = angle(shLineH, hipLineH);
+  return { trunkAng, trunkSign, sideBend, twist };
+}
+function neckGeom(F, offNeck) {
+  const { P, midEar, midSh, trunkVec, trunkU, fwd } = F;
+  const neckVec = sub(midEar, midSh);
+  let neckAng = angle(neckVec, trunkVec) - offNeck;
+  const neckFwd = dot(reject(neckVec, trunkU), fwd);
+  const neckExt = neckFwd < 0 && neckAng > 10;
+  neckAng = Math.max(0, neckAng);
+  const headTilt = Math.abs(90 - angle(sub(P(8), P(7)), trunkVec)); // ear line vs trunk
+  return { neckAng, neckExt, headTilt };
+}
+function armGeom(F, s, offWrist) {
+  const { P, vis, trunkU, fwd, midSh, rightAxis } = F;
+  const [sh, el, wr, ix, other] = s === 'left' ? [11, 13, 15, 19, 12] : [12, 14, 16, 20, 11];
+  const ua = sub(P(el), P(sh));
+  const down = scale(trunkU, -1);
+  const uaAng = angle(ua, down);
+  const uaFwd = dot(ua, fwd);
+  const outward = unit(sub(P(sh), P(other)));
+  const abducted = dot(unit(ua), outward) > 0.5; // > ~30° to the side
+  const fa = sub(P(wr), P(el));
+  const elbowFlex = angle(ua, fa); // 0 = straight
+  // working across midline or out to side
+  const wrLat = dot(sub(P(wr), midSh), rightAxis) * (s === 'left' ? -1 : 1);
+  const hand = sub(P(ix), P(wr));
+  const wristAng = Math.max(0, angle(fa, hand) - offWrist);
+  const visScore = vis(sh) + vis(el) + vis(wr);
+  return { uaAng, uaFwd, abducted, elbowFlex, wrLat, wristAng, visScore };
+}
+// upper-arm base score is the same band set in RULA and REBA (0-20 / 20-45 or extension > 20 / 45-90 / > 90)
+const upperArmBase = g => (g.uaFwd < 0 && g.uaAng > 20) ? 2 : g.uaAng <= 20 ? 1 : g.uaAng <= 45 ? 2 : g.uaAng <= 90 ? 3 : 4;
+function upperArmScore(g, o) {
+  let upper = upperArmBase(g);
+  if (g.abducted) upper += 1;
+  if (o.shoulderRaised) upper += 1;
+  if (o.armSupported) upper -= 1;
+  return clamp(upper, 1, 6);
+}
+// un-calibrated angles, used by the "calibrate upright" button
+function rawAngles(F, side) {
+  const { P } = F;
+  const [el, wr, ix] = side === 'left' ? [13, 15, 19] : [14, 16, 20];
+  return {
+    neckAng: angle(sub(F.midEar, F.midSh), F.trunkVec), trunkAng: angle(F.trunkVec, F.up),
+    wristAng: angle(sub(P(wr), P(el)), sub(P(ix), P(wr)))
+  };
+}
+
+/**
+ * Compute RULA from MediaPipe world landmarks.
+ * opts: { side:'auto'|'left'|'right', legsSupported, muscle, load(0..3), armSupported,
+ *         shoulderRaised, wristMode, wristDev, offsets:{neck,trunk,wrist} }
+ */
+function computeRULA(lm, opts = {}) {
+  const o = Object.assign({ side: 'auto', legsSupported: true, muscle: false, load: 0,
+    armSupported: false, shoulderRaised: false, wristMode: 'straight', wristDev: false,
+    offsets: { neck: 0, trunk: 0, wrist: 0 } }, opts);
+  const F = bodyFrame(lm);
+
+  // ---- Trunk ----
+  const { trunkAng, trunkSign, sideBend, twist } = trunkGeom(F, o.offsets.trunk);
+  let trunk = trunkAng < 5 ? 1 : trunkAng <= 20 ? 2 : trunkAng <= 60 ? 3 : 4;
+  if (trunkSign < 0 && trunkAng >= 5) trunk = Math.max(trunk, 2); // extension
   const trunkAdj = (sideBend > 10 ? 1 : 0) + (twist > 20 ? 1 : 0) > 0 ? 1 : 0;
   trunk = clamp(trunk + trunkAdj, 1, 6);
 
   // ---- Neck ----
-  const neckVec = sub(midEar, midSh);
-  let neckAng = angle(neckVec, trunkVec) - o.offsets.neck;
-  const neckFwd = dot(reject(neckVec, trunkU), fwd);
-  const neckExt = neckFwd < 0 && neckAng > 10;
-  neckAng = Math.max(0, neckAng);
+  const { neckAng, neckExt, headTilt } = neckGeom(F, o.offsets.neck);
   let neck = neckExt ? 4 : neckAng <= 10 ? 1 : neckAng <= 20 ? 2 : 3;
-  const headTilt = Math.abs(90 - angle(sub(P(8), P(7)), trunkVec)); // ear line vs trunk
   if (headTilt > 15) neck += 1;
   neck = clamp(neck, 1, 6);
 
@@ -339,34 +538,14 @@ function computeRULA(lm, opts = {}) {
 
   // ---- Arm (per side) ----
   function arm(s) {
-    const [sh, el, wr, ix, other] = s === 'left' ? [11, 13, 15, 19, 12] : [12, 14, 16, 20, 11];
-    const ua = sub(P(el), P(sh));
-    const down = scale(trunkU, -1);
-    const uaAng = angle(ua, down);
-    const uaFwd = dot(ua, fwd);
-    let upper = (uaFwd < 0 && uaAng > 20) ? 2 : uaAng <= 20 ? 1 : uaAng <= 45 ? 2 : uaAng <= 90 ? 3 : 4;
-    const outward = unit(sub(P(sh), P(other)));
-    const abducted = dot(unit(ua), outward) > 0.5; // > ~30° to the side
-    if (abducted) upper += 1;
-    if (o.shoulderRaised) upper += 1;
-    if (o.armSupported) upper -= 1;
-    upper = clamp(upper, 1, 6);
-
-    const fa = sub(P(wr), P(el));
-    const elbowFlex = angle(ua, fa); // 0 = straight
-    let lower = (elbowFlex >= 60 && elbowFlex <= 100) ? 1 : 2;
-    // working across midline or out to side
-    const wrLat = dot(sub(P(wr), midSh), rightAxis) * (s === 'left' ? -1 : 1);
-    if (wrLat < -0.05 || wrLat > 0.45) lower += 1;
+    const g = armGeom(F, s, o.offsets.wrist);
+    const upper = upperArmScore(g, o);
+    let lower = (g.elbowFlex >= 60 && g.elbowFlex <= 100) ? 1 : 2;
+    if (g.wrLat < -0.05 || g.wrLat > 0.45) lower += 1;
     lower = clamp(lower, 1, 3);
-
-    const hand = sub(P(ix), P(wr));
-    const wristAng = Math.max(0, angle(fa, hand) - o.offsets.wrist);
-    let wrist = wristAng <= 5 ? 1 : wristAng <= 15 ? 2 : 3;
-    wrist = clamp(wrist, 1, 4);
+    const wrist = wristScore('RULA', o.wristMode, g.wristAng, o.wristDev);
     const wTwist = 1;
-    const visScore = vis(sh) + vis(el) + vis(wr);
-    return { side: s, upper, lower, wrist, wTwist, uaAng, elbowFlex, wristAng, abducted, visScore };
+    return { side: s, upper, lower, wrist, wTwist, uaAng: g.uaAng, elbowFlex: g.elbowFlex, wristAng: g.wristAng, abducted: g.abducted, visScore: g.visScore };
   }
   const L = arm('left'), R = arm('right');
   const tableA = a => RULA_A[a.upper - 1][a.lower - 1][(a.wrist - 1) * 2 + (a.wTwist - 1)];
@@ -384,21 +563,108 @@ function computeRULA(lm, opts = {}) {
   const scoreC = postureA + add2;
   const scoreD = postureB + add2;
   const final = RULA_C[clamp(scoreC, 1, 8) - 1][clamp(scoreD, 1, 7) - 1];
-  const level = final <= 2 ? 1 : final <= 4 ? 2 : final <= 6 ? 3 : 4;
+  const level = rulaLevel(final);
   return {
-    final, level, postureA, postureB, scoreC, scoreD,
+    method: 'RULA', final, level, postureA, postureB, scoreC, scoreD,
     arm: chosen, arms: { left: L, right: R },
     parts: {
       upper: { score: chosen.upper, max: 6, angle: chosen.uaAng },
       lower: { score: chosen.lower, max: 3, angle: chosen.elbowFlex },
-      wrist: { score: chosen.wrist, max: 4, angle: chosen.wristAng },
+      wrist: { score: chosen.wrist, max: 4, angle: chosen.wristAng, manual: o.wristMode !== 'ai', mode: o.wristMode, dev: !!o.wristDev },
       neck: { score: neck, max: 6, angle: neckAng, ext: neckExt },
       trunk: { score: trunk, max: 6, angle: trunkAng, sideBend, twist },
       legs: { score: legs, max: 2 }
     },
-    raw: { neckAng: angle(neckVec, trunkVec), trunkAng: angle(trunkVec, up), wristAng: angle(sub(P(chosen.side === 'left' ? 15 : 16), P(chosen.side === 'left' ? 13 : 14)), sub(P(chosen.side === 'left' ? 19 : 20), P(chosen.side === 'left' ? 15 : 16))) }
+    raw: rawAngles(F, chosen.side)
   };
 }
+
+/**
+ * Compute REBA (Hignett & McAtamney, 2000) from MediaPipe world landmarks.
+ * opts: { side:'auto'|'left'|'right', load(0..2), shock, coupling(0..3),
+ *         activity:{static,repeat,rapid}, unstable, sitting, armSupported, shoulderRaised,
+ *         wristMode, wristDev, offsets:{neck,trunk,wrist} }
+ */
+function computeREBA(lm, opts = {}) {
+  const o = Object.assign({ side: 'auto', load: 0, shock: false, coupling: 0,
+    activity: { static: false, repeat: false, rapid: false }, unstable: false, sitting: false,
+    armSupported: false, shoulderRaised: false, wristMode: 'straight', wristDev: false,
+    offsets: { neck: 0, trunk: 0, wrist: 0 } }, opts);
+  const F = bodyFrame(lm);
+  const { P, vis } = F;
+
+  // ---- Trunk: signed sagittal angle, so flexion and extension score differently ----
+  const T = trunkGeom(F, o.offsets.trunk);
+  let fwdH = unit({ x: -(F.rHip.z - F.lHip.z), y: 0, z: F.rHip.x - F.lHip.x }); // horizontal, perpendicular to hip line
+  if (dot(fwdH, F.fwd) < 0) fwdH = scale(fwdH, -1); // agree with where the face points
+  const sag = Math.atan2(dot(F.trunkU, fwdH), dot(F.trunkU, F.up)) * 180 / Math.PI; // + flexion, - extension
+  const trunkAng = Math.max(0, Math.abs(sag) - o.offsets.trunk);
+  const trunkExt = sag < 0 && trunkAng >= 5;
+  let trunk = trunkAng < 5 ? 1 : trunkExt ? (trunkAng <= 20 ? 2 : 3) : trunkAng <= 20 ? 2 : trunkAng <= 60 ? 3 : 4;
+  const trunkAdj = (T.sideBend > 10 || T.twist > 20) ? 1 : 0;
+  trunk = clamp(trunk + trunkAdj, 1, 5);
+
+  // ---- Neck ----
+  const N = neckGeom(F, o.offsets.neck);
+  let neck = N.neckExt ? 2 : N.neckAng <= 20 ? 1 : 2;
+  const neckAdj = N.headTilt > 15 ? 1 : 0;
+  neck = clamp(neck + neckAdj, 1, 3);
+
+  // ---- Legs: support is entered by the assessor, knee flexion is measured (hip-knee-ankle) ----
+  const knee = s => {
+    const [h, k, a] = s === 'left' ? [23, 25, 27] : [24, 26, 28];
+    return { side: s, angle: angle(sub(P(k), P(h)), sub(P(a), P(k))), vis: vis(h) + vis(k) + vis(a) };
+  };
+  const kL = knee('left'), kR = knee('right');
+  const kn = Math.abs(kL.vis - kR.vis) > 0.6 ? (kL.vis > kR.vis ? kL : kR) : (kL.angle >= kR.angle ? kL : kR);
+  const kneeAdd = o.sitting ? 0 : kn.angle > 60 ? 2 : kn.angle >= 30 ? 1 : 0;
+  const legsBase = o.unstable ? 2 : 1;
+  const legs = clamp(legsBase + kneeAdd, 1, 4);
+
+  // ---- Arm (per side) ----
+  function arm(s) {
+    const g = armGeom(F, s, o.offsets.wrist);
+    const upper = upperArmScore(g, o);
+    const lower = (g.elbowFlex >= 60 && g.elbowFlex <= 100) ? 1 : 2;
+    const wrist = wristScore('REBA', o.wristMode, g.wristAng, o.wristDev);
+    return { side: s, upper, lower, wrist, uaAng: g.uaAng, elbowFlex: g.elbowFlex, wristAng: g.wristAng, abducted: g.abducted, visScore: g.visScore };
+  }
+  const L = arm('left'), R = arm('right');
+  const tableBOf = a => REBA_B[a.upper - 1][a.lower - 1][a.wrist - 1];
+  let chosen;
+  if (o.side === 'left') chosen = L;
+  else if (o.side === 'right') chosen = R;
+  else if (Math.abs(L.visScore - R.visScore) > 0.6) chosen = L.visScore > R.visScore ? L : R;
+  else chosen = tableBOf(L) >= tableBOf(R) ? L : R;
+
+  // ---- Scores ----
+  const tableA = REBA_A[trunk - 1][neck - 1][legs - 1];
+  const loadPts = clamp(o.load | 0, 0, 2) + (o.shock ? 1 : 0);
+  const scoreA = clamp(tableA + loadPts, 1, 12);
+  const tableB = tableBOf(chosen);
+  const coupling = clamp(o.coupling | 0, 0, 3);
+  const scoreB = clamp(tableB + coupling, 1, 12);
+  const tableC = REBA_C[scoreA - 1][scoreB - 1];
+  const act = o.activity || {};
+  const activity = (act.static ? 1 : 0) + (act.repeat ? 1 : 0) + (act.rapid ? 1 : 0);
+  const final = tableC + activity;
+  const risk = rebaRisk(final);
+  return {
+    method: 'REBA', final, level: risk, risk, tableA, tableB, scoreA, scoreB, tableC, loadPts, coupling, activity,
+    arm: chosen, arms: { left: L, right: R },
+    knee: { angle: kn.angle, side: kn.side, add: kneeAdd, sitting: !!o.sitting },
+    parts: {
+      trunk: { score: trunk, max: 5, angle: trunkAng, ext: trunkExt, adj: trunkAdj, sideBend: T.sideBend, twist: T.twist },
+      neck: { score: neck, max: 3, angle: N.neckAng, ext: N.neckExt, adj: neckAdj },
+      legs: { score: legs, max: 4, base: legsBase, kneeAdd, sitting: !!o.sitting, unstable: !!o.unstable },
+      upper: { score: chosen.upper, max: 6, angle: chosen.uaAng },
+      lower: { score: chosen.lower, max: 2, angle: chosen.elbowFlex },
+      wrist: { score: chosen.wrist, max: 3, angle: chosen.wristAng, manual: o.wristMode !== 'ai', mode: o.wristMode, dev: !!o.wristDev }
+    },
+    raw: rawAngles(F, chosen.side)
+  };
+}
+// @engine-end
 
 
 // ===== App =====
@@ -407,20 +673,49 @@ const $ = id => document.getElementById(id);
 const canvas = $('canvas'), ctx = canvas.getContext('2d');
 const video = $('video');
 const LEVEL_TXT = {
-  1: ['ระดับ 1 · ยอมรับได้', 'ท่าทางเหมาะสม หากไม่ได้ทำต่อเนื่องเป็นเวลานาน'],
-  2: ['ระดับ 2 · ควรศึกษาเพิ่มเติม', 'อาจต้องปรับปรุงลักษณะงานในอนาคต'],
-  3: ['ระดับ 3 · ควรปรับปรุงเร็ว ๆ นี้', 'ควรตรวจสอบงานและปรับเปลี่ยนในระยะเวลาอันใกล้'],
-  4: ['ระดับ 4 · ต้องปรับปรุงทันที', 'ท่าทางมีความเสี่ยงสูง ต้องแก้ไขลักษณะงานโดยเร็วที่สุด']
+  RULA: {
+    1: ['ระดับ 1 · ยอมรับได้', 'ท่าทางเหมาะสม หากไม่ได้ทำต่อเนื่องเป็นเวลานาน'],
+    2: ['ระดับ 2 · ควรศึกษาเพิ่มเติม', 'อาจต้องปรับปรุงลักษณะงานในอนาคต'],
+    3: ['ระดับ 3 · ควรปรับปรุงเร็ว ๆ นี้', 'ควรตรวจสอบงานและปรับเปลี่ยนในระยะเวลาอันใกล้'],
+    4: ['ระดับ 4 · ต้องปรับปรุงทันที', 'ท่าทางมีความเสี่ยงสูง ต้องแก้ไขลักษณะงานโดยเร็วที่สุด']
+  },
+  REBA: {
+    1: ['ระดับ 1 · ความเสี่ยงต่ำมาก', 'ไม่ต้องแก้ไข'],
+    2: ['ระดับ 2 · ความเสี่ยงต่ำ', 'อาจต้องแก้ไข'],
+    3: ['ระดับ 3 · ความเสี่ยงปานกลาง', 'ควรแก้ไข'],
+    4: ['ระดับ 4 · ความเสี่ยงสูง', 'ต้องแก้ไขโดยเร็ว'],
+    5: ['ระดับ 5 · ความเสี่ยงสูงมาก', 'ต้องแก้ไขทันที']
+  }
 };
-const PART_NAMES = { upper: 'ต้นแขน', lower: 'ปลายแขน', wrist: 'ข้อมือ', neck: 'คอ', trunk: 'ลำตัว', legs: 'ขา' };
-const levelOf = s => s <= 2 ? 1 : s <= 4 ? 2 : s <= 6 ? 3 : 4;
-const sevOf = (part, sc) => {
-  const t = { upper: [1, 2, 3], lower: [1, 2, 3], wrist: [1, 2, 3], neck: [1, 2, 3], trunk: [1, 2, 3], legs: [1, 2, 2] }[part];
+const LEGEND = {
+  RULA: ['ระดับ 1 ยอมรับได้', 'ระดับ 2 ควรศึกษาเพิ่ม', 'ระดับ 3 ปรับปรุงเร็ว ๆ นี้', 'ระดับ 4 ปรับปรุงทันที'],
+  REBA: ['ต่ำมาก (1)', 'ต่ำ (2–3)', 'ปานกลาง (4–7)', 'สูง (8–10)', 'สูงมาก (11–15)']
+};
+const FORM_HINT = {
+  RULA: 'ส่วนที่กล้องมองไม่เห็น ให้ผู้ประเมินกรอกเอง ตามแบบประเมิน RULA ขั้นที่ 7–8 และ 14–15',
+  REBA: 'ส่วนที่กล้องมองไม่เห็น ให้ผู้ประเมินกรอกเอง ได้แก่ ท่าข้อมือ น้ำหนัก การจับ กิจกรรม และลักษณะการยืน ส่วนมุมเข่า AI วัดให้'
+};
+const REBA_BANDS = [[1, 1], [2, 3], [4, 7], [8, 10], [11, 15]];
+const bandTxt = ([a, b]) => a === b ? String(a) : `${a}–${b}`;
+const PART_NAMES = { upper: 'ต้นแขน', lower: 'ปลายแขน', wrist: 'ข้อมือ', neck: 'คอ', trunk: 'ลำตัว', legs: 'ขา', knee: 'เข่า' };
+const PART_ORDER = { RULA: ['upper', 'lower', 'wrist', 'neck', 'trunk', 'legs'], REBA: ['trunk', 'neck', 'legs', 'knee', 'upper', 'lower', 'wrist'] };
+const WRIST_TXT = { straight: 'ตรง', flex15: 'งอไม่เกิน 15°', flexOver: 'งอเกิน 15°' };
+const COUPLING_TXT = ['ดี', 'พอใช้', 'ไม่ดี', 'ยอมรับไม่ได้'];
+let method = 'RULA';
+const levelOf = (s, m = method) => m === 'REBA' ? rebaRisk(s) : rulaLevel(s);
+// alarm threshold: RULA action level 3+, REBA score 8+ (high)
+const isHigh = (s, m = method) => m === 'REBA' ? s >= 8 : rulaLevel(s) >= 3;
+const SEV_T = {
+  RULA: { upper: [1, 2, 3], lower: [1, 2, 3], wrist: [1, 2, 3], neck: [1, 2, 3], trunk: [1, 2, 3], legs: [1, 2, 2] },
+  REBA: { upper: [1, 2, 3], lower: [1, 2, 2], wrist: [1, 2, 3], neck: [1, 2, 3], trunk: [1, 2, 3], legs: [1, 2, 3] }
+};
+const sevOf = (part, sc, m = method) => {
+  const t = SEV_T[m][part];
   return sc <= t[0] ? 1 : sc <= t[1] ? 2 : sc <= t[2] ? 3 : 4;
 };
 const SEV_COLOR = () => {
   const cs = getComputedStyle(document.documentElement);
-  return { 1: cs.getPropertyValue('--l1').trim(), 2: cs.getPropertyValue('--l2').trim(), 3: cs.getPropertyValue('--l3').trim(), 4: cs.getPropertyValue('--l4').trim() };
+  return Object.fromEntries([1, 2, 3, 4, 5].map(l => [l, cs.getPropertyValue('--l' + l).trim()]));
 };
 
 // ---- storage (per-viewer convenience, optional) ----
@@ -435,49 +730,96 @@ let mirrored = false, lastVideoTime = -1, rafId = 0;
 let lastResult = null, lastLm2d = null, recent = [];
 let offsets = store.get('offsets', { neck: 0, trunk: 0, wrist: 0 });
 let records = store.get('records', []);
-const session = { start: 0, last: 0, levelTime: [0, 0, 0, 0, 0], samples: [], partHigh: {}, max: 0 };
+const session = { start: 0, last: 0, levelTime: [0, 0, 0, 0, 0, 0], samples: [], partHigh: {}, max: 0 };
 let highSince = 0, alarmOn = false;
 
 // ---- ladder ----
-(function buildLadder() {
+function buildLadder() {
   const el = $('ladder');
+  el.innerHTML = ''; el.dataset.m = method;
+  if (method === 'REBA') {
+    REBA_BANDS.forEach((b, i) => {
+      const r = document.createElement('div');
+      r.className = 'rung'; r.dataset.l = i + 1; r.innerHTML = `<span class="rg">${bandTxt(b)}</span>`;
+      el.appendChild(r);
+    });
+    return;
+  }
   for (let s = 1; s <= 7; s++) {
     const r = document.createElement('div');
-    r.className = 'rung'; r.dataset.s = s; r.dataset.l = levelOf(s); r.textContent = s;
+    r.className = 'rung'; r.dataset.s = s; r.dataset.l = rulaLevel(s); r.textContent = s;
     el.appendChild(r);
   }
-})();
+}
 function setLadder(score) {
-  document.querySelectorAll('.rung').forEach(r => {
-    const s = +r.dataset.s;
-    r.classList.toggle('on', score != null && s <= score);
-    r.classList.toggle('current', score === s);
-  });
+  if (method === 'REBA') {
+    const risk = score == null ? null : rebaRisk(score);
+    document.querySelectorAll('.rung').forEach(r => {
+      const l = +r.dataset.l, cur = risk === l, range = bandTxt(REBA_BANDS[l - 1]);
+      r.classList.toggle('on', risk != null && l <= risk);
+      r.classList.toggle('current', cur);
+      r.innerHTML = cur ? `<span>${score}</span><span class="rg">${range}</span>` : `<span class="rg">${range}</span>`;
+    });
+  } else {
+    document.querySelectorAll('.rung').forEach(r => {
+      const s = +r.dataset.s;
+      r.classList.toggle('on', score != null && s <= score);
+      r.classList.toggle('current', score === s);
+    });
+  }
   const v = $('verdict');
   if (score == null) { v.classList.remove('show'); return; }
-  const [t, d] = LEVEL_TXT[levelOf(score)];
-  $('vTitle').textContent = 'RULA ' + score + ' — ' + t.split('·')[1].trim();
+  const [t, d] = LEVEL_TXT[method][levelOf(score)];
+  $('vTitle').textContent = method + ' ' + score + ' — ' + t.split('·')[1].trim();
   $('vText').textContent = d;
   v.classList.add('show');
 }
 
 // ---- options from form ----
 function opts() {
-  return {
-    side: $('fSide').value, load: +$('fLoad').value, muscle: $('fMuscle').checked,
-    legsSupported: $('fLegs').checked, shoulderRaised: $('fShoulder').checked,
-    armSupported: $('fArmSup').checked, offsets
+  const o = {
+    side: $('fSide').value, shoulderRaised: $('fShoulder').checked, armSupported: $('fArmSup').checked,
+    wristMode: $('fWrist').value || 'straight', wristDev: $('fWristDev').checked, offsets
   };
+  if (method === 'REBA') return Object.assign(o, {
+    load: +$('fRebaLoad').value, shock: $('fShock').checked, coupling: +$('fCoupling').value,
+    activity: { static: $('fActStatic').checked, repeat: $('fActRepeat').checked, rapid: $('fActRapid').checked },
+    unstable: $('fUnstable').checked, sitting: $('fSitting').checked
+  });
+  return Object.assign(o, { load: +$('fLoad').value, muscle: $('fMuscle').checked, legsSupported: $('fLegs').checked });
 }
-['fStation', 'fTask', 'fAssessor', 'fHook', 'fAlert', 'fLoad', 'fSide'].forEach(id => {
+const assess = w => method === 'REBA' ? computeREBA(w, opts()) : computeRULA(w, opts());
+const SCORE_SELECTS = ['fLoad', 'fSide', 'fWrist', 'fRebaLoad', 'fCoupling'];
+const SCORE_CHECKS = ['fMuscle', 'fLegs', 'fShoulder', 'fArmSup', 'fWristDev', 'fShock', 'fActStatic', 'fActRepeat', 'fActRapid', 'fUnstable', 'fSitting'];
+['fStation', 'fTask', 'fAssessor', 'fHook', 'fAlert', ...SCORE_SELECTS].forEach(id => {
   const v = store.get('f:' + id, null); if (v != null) $(id).value = v;
+  if ($(id).tagName === 'SELECT' && $(id).selectedIndex < 0) $(id).selectedIndex = 0; // stale stored value
   $(id).addEventListener('change', () => store.set('f:' + id, $(id).value));
 });
-['fMuscle', 'fLegs', 'fShoulder', 'fArmSup'].forEach(id => {
+SCORE_CHECKS.forEach(id => {
   const v = store.get('f:' + id, null); if (v != null) $(id).checked = v;
   $(id).addEventListener('change', () => { store.set('f:' + id, $(id).checked); recompute(); });
 });
-['fLoad', 'fSide'].forEach(id => $(id).addEventListener('change', recompute));
+SCORE_SELECTS.forEach(id => $(id).addEventListener('change', recompute));
+
+// ---- method switch (RULA / REBA) ----
+function setMethod(m) {
+  method = m === 'REBA' ? 'REBA' : 'RULA';
+  store.set('method', method);
+  document.querySelectorAll('#methodSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === method)));
+  document.querySelectorAll('[data-method]').forEach(el => { el.hidden = el.dataset.method !== method; });
+  $('formHint').textContent = FORM_HINT[method];
+  $('distHint').textContent = method === 'REBA'
+    ? 'สัดส่วนเวลาที่อยู่ในแต่ละระดับความเสี่ยง REBA ตั้งแต่เปิดกล้องหรือสลับวิธี'
+    : 'สัดส่วนเวลาที่อยู่ในแต่ละระดับการแก้ไข (Action Level) ตั้งแต่เปิดกล้องหรือสลับวิธี';
+  $('legend').innerHTML = LEGEND[method].map((t, i) => `<span><i style="background:var(--l${i + 1})"></i>${t}</span>`).join('');
+  $('timeline').setAttribute('aria-label', `กราฟคะแนน ${method} ตามเวลา`);
+  buildLadder();
+  // scores of the two methods are on different scales, so start the summary afresh
+  recent = []; showAlarm(false); resetSession();
+  if (lastResult) recompute(); else { setLadder(null); renderParts(null); }
+}
+document.querySelectorAll('#methodSeg button').forEach(b => b.addEventListener('click', () => { if (b.dataset.m !== method) setMethod(b.dataset.m); }));
 
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -616,7 +958,7 @@ function handleResult(res, still) {
   }
   const w = res.worldLandmarks[0].map((p, i) => ({ x: p.x, y: p.y, z: p.z, visibility: res.landmarks[0][i].visibility }));
   lastLm2d = res.landmarks[0];
-  const r = computeRULA(w, opts());
+  const r = assess(w);
   r._world = w;
   lastResult = r;
   recent.push(r.final); if (recent.length > 9) recent.shift();
@@ -630,7 +972,7 @@ const median = a => { const s = [...a].sort((x, y) => x - y); return s[Math.floo
 
 function recompute() {
   if (!lastResult) return;
-  const r = computeRULA(lastResult._world, opts()); r._world = lastResult._world; lastResult = r;
+  const r = assess(lastResult._world); r._world = lastResult._world; lastResult = r;
   if (!running) { drawFrame(lastSource); drawSkeleton(lastLm2d, r); }
   setLadder(r.final); renderParts(r, r.final);
 }
@@ -650,8 +992,10 @@ function drawSkeleton(lm, r) {
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   };
   const grey = 'rgba(255,255,255,.75)';
-  // legs
-  [[23, 25], [25, 27], [24, 26], [26, 28], [23, 24]].forEach(([a, b]) => seg(pt(a), pt(b), grey, lw * .7));
+  // legs: grey in RULA (entered by the assessor), coloured by the leg score in REBA
+  const legColor = r.method === 'REBA' ? C[sevOf('legs', r.parts.legs.score, 'REBA')] : grey;
+  [[23, 25], [25, 27], [24, 26], [26, 28]].forEach(([a, b]) => seg(pt(a), pt(b), legColor, lw * (r.method === 'REBA' ? .9 : .7)));
+  seg(pt(23), pt(24), grey, lw * .7);
   const mSh = midp(pt(11), pt(12)), mHip = midp(pt(23), pt(24)), mEar = midp(pt(7), pt(8));
   seg(pt(11), pt(12), grey, lw * .7);
   seg(mHip, mSh, C[sevOf('trunk', r.parts.trunk.score)], lw * 1.3);
@@ -674,7 +1018,7 @@ function drawSkeleton(lm, r) {
   });
   // angle labels on the active side
   const label = (p, txt) => {
-    ctx.font = `600 ${Math.max(13, W / 55)}px "IBM Plex Sans Thai", system-ui, sans-serif`;
+    ctx.font = `600 ${Math.max(13, W / 55)}px "Plus Jakarta Sans", "Noto Sans Thai", system-ui, sans-serif`;
     const m = ctx.measureText(txt), pad = 6, h = Math.max(13, W / 55) + 8;
     ctx.fillStyle = 'rgba(0,0,0,.7)'; ctx.fillRect(p.x + 10, p.y - h / 2, m.width + pad * 2, h);
     ctx.fillStyle = '#fff'; ctx.fillText(txt, p.x + 10 + pad, p.y + h / 2 - 7);
@@ -684,33 +1028,55 @@ function drawSkeleton(lm, r) {
   label(pt(s[1]), Math.round(r.parts.lower.angle) + '°');
   label(mHip, 'ลำตัว ' + Math.round(r.parts.trunk.angle) + '°');
   label(mEar, 'คอ ' + Math.round(r.parts.neck.angle) + '°');
+  if (r.method === 'REBA') label(pt(r.knee.side === 'left' ? 25 : 26), 'เข่า ' + Math.round(r.knee.angle) + '°');
 }
 
 // ---- parts panel ----
+const wristTxt = p => (p.manual ? WRIST_TXT[p.mode] || 'ตรง' : 'งอ ' + Math.round(p.angle) + '°')
+  + (p.dev ? ' · เบี่ยง/บิด' : '') + (p.manual ? ' (กรอกเอง)' : ' (AI ทดลอง)');
 function renderParts(r, shown) {
   const el = $('parts');
   if (!r) {
-    el.innerHTML = Object.values(PART_NAMES).map(n => `<div class="part"><div class="name">${n}</div><div class="val">–</div><div class="ang">ยังไม่พบท่าทาง</div></div>`).join('');
+    el.innerHTML = PART_ORDER[method].map(k => `<div class="part"><div class="name">${PART_NAMES[k]}</div><div class="val">–</div><div class="ang">ยังไม่พบท่าทาง</div></div>`).join('');
     $('sums').innerHTML = ''; return;
   }
-  const angTxt = (k, p) => {
-    if (k === 'legs') return $('fLegs').checked ? 'รองรับดี (กรอกเอง)' : 'ไม่สมดุล (กรอกเอง)';
-    if (k === 'lower') return 'งอศอก ' + Math.round(p.angle) + '°';
-    if (k === 'neck') return (p.ext ? 'เงยหน้า ' : 'ก้ม ') + Math.round(p.angle) + '°';
-    if (k === 'trunk') return 'เอียงจากแนวดิ่ง ' + Math.round(p.angle) + '°';
-    if (k === 'upper') return 'ยกจากลำตัว ' + Math.round(p.angle) + '°' + (r.arm.abducted ? ' · กางออก' : '');
-    return 'งอ ' + Math.round(p.angle) + '°';
+  const deg = a => Math.round(a) + '°';
+  const angTxt = r.method === 'REBA' ? (k, p) => {
+    if (k === 'trunk') return (p.angle < 5 ? 'ตัวตรง ' : p.ext ? 'แอ่นหลัง ' : 'ก้มตัว ') + deg(p.angle) + (p.adj ? ' · บิด/เอียงข้าง' : '');
+    if (k === 'neck') return (p.ext ? 'เงยหน้า ' : 'ก้ม ') + deg(p.angle) + (p.adj ? ' · เอียงข้าง' : '');
+    if (k === 'legs') return (p.sitting ? 'นั่งทำงาน' : p.unstable ? 'ยืนขาเดียว/ไม่มั่นคง' : 'ยืนสองขา') + ' (กรอกเอง)';
+    if (k === 'upper') return 'ยกจากลำตัว ' + deg(p.angle) + (r.arm.abducted ? ' · กางออก' : '');
+    if (k === 'lower') return 'งอศอก ' + deg(p.angle);
+    return wristTxt(p);
+  } : (k, p) => {
+    if (k === 'legs') return p.score === 1 ? 'รองรับดี (กรอกเอง)' : 'ไม่สมดุล (กรอกเอง)';
+    if (k === 'lower') return 'งอศอก ' + deg(p.angle);
+    if (k === 'neck') return (p.ext ? 'เงยหน้า ' : 'ก้ม ') + deg(p.angle);
+    if (k === 'trunk') return 'เอียงจากแนวดิ่ง ' + deg(p.angle);
+    if (k === 'upper') return 'ยกจากลำตัว ' + deg(p.angle) + (r.arm.abducted ? ' · กางออก' : '');
+    return wristTxt(p);
   };
-  el.innerHTML = Object.entries(r.parts).map(([k, p]) =>
-    `<div class="part" data-sev="${sevOf(k, p.score)}"><div class="name">${PART_NAMES[k]}${k === 'upper' || k === 'lower' || k === 'wrist' ? (r.arm.side === 'left' ? ' (ซ้าย)' : ' (ขวา)') : ''}</div>
-     <div class="val">${p.score}<small> / ${p.max}</small></div><div class="ang">${angTxt(k, p)}</div></div>`).join('');
-  $('sums').innerHTML = `<span>คะแนนแขน–ข้อมือ (C) <b>${r.scoreC}</b></span><span>คะแนนคอ–ลำตัว–ขา (D) <b>${r.scoreD}</b></span><span>คะแนน RULA <b>${shown}</b></span>`;
+  const sideTxt = r.arm.side === 'left' ? ' (ซ้าย)' : ' (ขวา)';
+  const card = (k, sev, val, ang) => `<div class="part" data-sev="${sev}"><div class="name">${PART_NAMES[k]}${['upper', 'lower', 'wrist'].includes(k) ? sideTxt : ''}</div>
+     <div class="val">${val}</div><div class="ang">${ang}</div></div>`;
+  el.innerHTML = PART_ORDER[r.method].map(k => {
+    if (k === 'knee') { // REBA: knee flexion measured by AI, adds 0/+1/+2 to the leg score
+      const kn = r.knee;
+      return card('knee', kn.sitting ? 1 : kn.add + 1, deg(kn.angle) + '<small> งอ</small>',
+        kn.sitting ? 'นั่งทำงาน ไม่บวกคะแนนขา' : kn.add ? `บวกคะแนนขา +${kn.add}` : 'งอน้อยกว่า 30° ไม่บวกคะแนน');
+    }
+    const p = r.parts[k];
+    return card(k, sevOf(k, p.score, r.method), `${p.score}<small> / ${p.max}</small>`, angTxt(k, p));
+  }).join('');
+  $('sums').innerHTML = r.method === 'REBA'
+    ? `<span>คะแนน A <b>${r.scoreA}</b></span><span>คะแนน B <b>${r.scoreB}</b></span><span>Table C <b>${r.tableC}</b></span><span>กิจกรรม <b>+${r.activity}</b></span><span>คะแนน REBA <b>${shown}</b></span>`
+    : `<span>คะแนนแขน–ข้อมือ (C) <b>${r.scoreC}</b></span><span>คะแนนคอ–ลำตัว–ขา (D) <b>${r.scoreD}</b></span><span>คะแนน RULA <b>${shown}</b></span>`;
 }
 
 // ---- session ----
 function resetSession() {
   session.start = performance.now(); session.last = session.start;
-  session.levelTime = [0, 0, 0, 0, 0]; session.samples = []; session.partHigh = {}; session.max = 0;
+  session.levelTime = [0, 0, 0, 0, 0, 0]; session.samples = []; session.partHigh = {}; session.max = 0;
   highSince = 0; renderSession();
 }
 let lastRender = 0;
@@ -722,7 +1088,7 @@ function tickSession(r, shown) {
     session.max = Math.max(session.max, shown);
     if (!session.samples.length || now - session.samples[session.samples.length - 1].t > 500)
       session.samples.push({ t: now - session.start, s: shown });
-    if (lv >= 3) {
+    if (isHigh(shown)) {
       Object.entries(r.parts).forEach(([k, p]) => { if (sevOf(k, p.score) >= 3) session.partHigh[k] = (session.partHigh[k] || 0) + dt; });
       if (!highSince) highSince = now;
       if (now - highSince > (+$('fAlert').value || 5) * 1000) showAlarm(true);
@@ -750,7 +1116,7 @@ function beep() {
 function renderSession() {
   const C = SEV_COLOR();
   const tot = session.levelTime.slice(1).reduce((a, b) => a + b, 0);
-  $('dist').innerHTML = tot ? [1, 2, 3, 4].map(l => `<span style="width:${(session.levelTime[l] / tot * 100).toFixed(1)}%;background:${C[l]}" title="ระดับ ${l} ${(session.levelTime[l] / tot * 100).toFixed(0)}%"></span>`).join('') : '';
+  $('dist').innerHTML = tot ? LEGEND[method].map((_, i) => i + 1).map(l => `<span style="width:${(session.levelTime[l] / tot * 100).toFixed(1)}%;background:${C[l]}" title="ระดับ ${l} ${(session.levelTime[l] / tot * 100).toFixed(0)}%"></span>`).join('') : '';
   const secs = Math.round((session.last - session.start) / 1000);
   $('kDur').textContent = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
   $('kMax').textContent = session.max || '–';
@@ -763,9 +1129,13 @@ function drawTimeline() {
   const W = c.width = c.clientWidth * devicePixelRatio || 800, H = c.height = 120 * devicePixelRatio;
   const C = SEV_COLOR(), cs = getComputedStyle(document.documentElement);
   g.clearRect(0, 0, W, H);
-  const y = s => H - 6 * devicePixelRatio - (s - 1) / 6 * (H - 12 * devicePixelRatio);
+  const top = method === 'REBA' ? 15 : 7;
+  const y = s => H - 6 * devicePixelRatio - (s - 1) / (top - 1) * (H - 12 * devicePixelRatio);
   // bands
-  [[1, 2, 1], [2, 4, 2], [4, 6, 3], [6, 7, 4]].forEach(([a, b, l]) => {
+  const bands = method === 'REBA'
+    ? [[1, 1.5, 1], [1.5, 3.5, 2], [3.5, 7.5, 3], [7.5, 10.5, 4], [10.5, 15, 5]]
+    : [[1, 2, 1], [2, 4, 2], [4, 6, 3], [6, 7, 4]];
+  bands.forEach(([a, b, l]) => {
     g.fillStyle = C[l]; g.globalAlpha = .12; g.fillRect(0, y(b), W, y(a) - y(b)); g.globalAlpha = 1;
   });
   const sm = session.samples; if (sm.length < 2) return;
@@ -795,13 +1165,22 @@ function renderRecords() {
   const el = $('records');
   $('btnCsv').disabled = $('btnClear').disabled = !records.length;
   if (!records.length) { el.innerHTML = '<div class="emptyrec">ยังไม่มีท่าที่บันทึก</div>'; return; }
-  el.innerHTML = records.slice().reverse().map(r => `
+  el.innerHTML = records.slice().reverse().map(r => {
+    const m = recMethod(r), p = r.parts;
+    const detail = m === 'REBA'
+      ? `ลำตัว ${p.trunk} · คอ ${p.neck} · ขา ${p.legs} · แขน ${p.upper}/${p.lower}/${p.wrist}`
+      : `แขน ${p.upper}/${p.lower}/${p.wrist} · คอ ${p.neck} · ลำตัว ${p.trunk}`;
+    return `
     <div class="rec"><img src="${r.img}" alt="ภาพท่าทางที่บันทึก">
-      <div><div class="t">${esc(r.task || 'ไม่ระบุงาน')}</div>
+      <div><div class="t"><span class="tag">${m}</span>${esc(r.task || 'ไม่ระบุงาน')}</div>
       <div class="m">${esc(r.station || '')} ${new Date(r.time).toLocaleString('th-TH')}</div>
-      <div class="m">แขน ${r.parts.upper}/${r.parts.lower}/${r.parts.wrist} · คอ ${r.parts.neck} · ลำตัว ${r.parts.trunk}</div></div>
-      <div class="badge" data-l="${r.level}" aria-label="คะแนน RULA ${r.final}">${r.final}</div></div>`).join('');
+      <div class="m">${detail}</div></div>
+      <div class="badge" data-l="${recLevel(r)}" aria-label="คะแนน ${m} ${r.final}">${r.final}</div></div>`;
+  }).join('');
 }
+// records saved before REBA existed have no method field: they are RULA
+const recMethod = r => r.method === 'REBA' ? 'REBA' : 'RULA';
+const recLevel = r => recMethod(r) === 'REBA' ? r.risk : r.level;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 $('btnSnap').onclick = async () => {
   if (!lastResult) { toast('ยังไม่พบท่าทางในภาพ ขยับให้เห็นทั้งตัว'); return; }
@@ -809,14 +1188,26 @@ $('btnSnap').onclick = async () => {
   const t = document.createElement('canvas'); const k = 320 / canvas.width;
   t.width = 320; t.height = Math.round(canvas.height * k);
   t.getContext('2d').drawImage(canvas, 0, 0, t.width, t.height);
-  const rec = {
-    time: new Date().toISOString(), station: $('fStation').value, task: $('fTask').value, assessor: $('fAssessor').value,
-    final, level: levelOf(final), scoreC: r.scoreC, scoreD: r.scoreD, side: r.arm.side,
-    parts: Object.fromEntries(Object.entries(r.parts).map(([k, p]) => [k, p.score])),
-    angles: { upperArm: Math.round(r.parts.upper.angle), elbow: Math.round(r.parts.lower.angle), wrist: Math.round(r.parts.wrist.angle), neck: Math.round(r.parts.neck.angle), trunk: Math.round(r.parts.trunk.angle) },
+  const base = { time: new Date().toISOString(), station: $('fStation').value, task: $('fTask').value, assessor: $('fAssessor').value, method: r.method };
+  const scoresOf = keys => Object.fromEntries(keys.map(k => [k, r.parts[k].score]));
+  const P = r.parts, rnd = Math.round;
+  const rec = r.method === 'REBA' ? Object.assign(base, {
+    final, risk: rebaRisk(final), scoreA: r.scoreA, scoreB: r.scoreB, tableC: r.tableC, side: r.arm.side,
+    parts: scoresOf(['trunk', 'neck', 'legs', 'upper', 'lower', 'wrist']),
+    // trunk and neck are signed: negative = extension (leaning back / looking up)
+    angles: { trunk: P.trunk.ext ? -rnd(P.trunk.angle) : rnd(P.trunk.angle), neck: P.neck.ext ? -rnd(P.neck.angle) : rnd(P.neck.angle),
+      knee: rnd(r.knee.angle), upperArm: rnd(P.upper.angle), elbow: rnd(P.lower.angle) },
+    load: +$('fRebaLoad').value, shock: $('fShock').checked, coupling: +$('fCoupling').value,
+    activity: { static: $('fActStatic').checked, repeat: $('fActRepeat').checked, rapid: $('fActRapid').checked },
+    img: t.toDataURL('image/jpeg', .7)
+  }) : Object.assign(base, {
+    final, level: rulaLevel(final), scoreC: r.scoreC, scoreD: r.scoreD, side: r.arm.side,
+    parts: scoresOf(['upper', 'lower', 'wrist', 'neck', 'trunk', 'legs']),
+    // wrist angle is only meaningful when the AI measured it
+    angles: { upperArm: rnd(P.upper.angle), elbow: rnd(P.lower.angle), wrist: P.wrist.manual ? null : rnd(P.wrist.angle), neck: rnd(P.neck.angle), trunk: rnd(P.trunk.angle) },
     load: +$('fLoad').value, muscle: $('fMuscle').checked,
     img: t.toDataURL('image/jpeg', .7)
-  };
+  });
   records.push(rec); if (records.length > 40) records.shift();
   store.set('records', records); renderRecords();
   const hook = $('fHook').value.trim();
@@ -830,19 +1221,31 @@ $('btnSnap').onclick = async () => {
 };
 $('btnClear').onclick = () => { if (confirm('ล้างรายการท่าที่บันทึกทั้งหมด?')) { records = []; store.set('records', records); renderRecords(); } };
 $('btnCsv').onclick = () => {
-  const head = ['เวลา', 'จุดงาน', 'งาน', 'ผู้ประเมิน', 'RULA', 'ระดับ', 'แขนที่ประเมิน', 'ต้นแขน', 'ปลายแขน', 'ข้อมือ', 'คอ', 'ลำตัว', 'ขา', 'คะแนน C', 'คะแนน D',
-    'มุมต้นแขน', 'มุมศอก', 'มุมข้อมือ', 'มุมคอ', 'มุมลำตัว', 'น้ำหนัก/แรง', 'ค้างท่า/ทำซ้ำ'];
-  const rows = records.map(r => [new Date(r.time).toLocaleString('th-TH'), r.station, r.task, r.assessor, r.final, r.level, r.side === 'left' ? 'ซ้าย' : 'ขวา',
-    r.parts.upper, r.parts.lower, r.parts.wrist, r.parts.neck, r.parts.trunk, r.parts.legs, r.scoreC, r.scoreD,
-    r.angles.upperArm, r.angles.elbow, r.angles.wrist, r.angles.neck, r.angles.trunk, r.load, r.muscle ? 'ใช่' : 'ไม่']);
+  // one table for both methods: shared columns first, then columns that belong to one method (blank for the other)
+  const head = ['เวลา', 'จุดงาน', 'งาน', 'ผู้ประเมิน', 'วิธีประเมิน', 'คะแนน', 'ระดับ', 'แขนที่ประเมิน', 'ต้นแขน', 'ปลายแขน', 'ข้อมือ', 'คอ', 'ลำตัว', 'ขา',
+    'มุมต้นแขน', 'มุมศอก', 'มุมข้อมือ', 'มุมคอ', 'มุมลำตัว', 'มุมเข่า', 'น้ำหนัก/แรง',
+    'คะแนน C (RULA)', 'คะแนน D (RULA)', 'ค้างท่า/ทำซ้ำ (RULA)',
+    'คะแนน A (REBA)', 'คะแนน B (REBA)', 'Table C (REBA)', 'แรงกระแทก (REBA)', 'การจับ (REBA)', 'กิจกรรม (REBA)'];
+  const yn = b => b ? 'ใช่' : 'ไม่';
+  const actTxt = a => [a.static && 'ค้างท่าเกิน 1 นาที', a.repeat && 'ทำซ้ำเกิน 4 ครั้งต่อนาที', a.rapid && 'เปลี่ยนท่ารวดเร็ว/พื้นไม่มั่นคง'].filter(Boolean).join(', ') || 'ไม่มี';
+  const rows = records.map(r => {
+    const reba = recMethod(r) === 'REBA', p = r.parts, a = r.angles;
+    return [new Date(r.time).toLocaleString('th-TH'), r.station, r.task, r.assessor, recMethod(r), r.final, recLevel(r), r.side === 'left' ? 'ซ้าย' : 'ขวา',
+      p.upper, p.lower, p.wrist, p.neck, p.trunk, p.legs,
+      a.upperArm, a.elbow, a.wrist, a.neck, a.trunk, a.knee, r.load,
+      reba ? '' : r.scoreC, reba ? '' : r.scoreD, reba ? '' : yn(r.muscle),
+      reba ? r.scoreA : '', reba ? r.scoreB : '', reba ? r.tableC : '', reba ? yn(r.shock) : '',
+      reba ? COUPLING_TXT[r.coupling] : '', reba ? actTxt(r.activity || {}) : ''];
+  });
   const csv = '\uFEFF' + [head, ...rows].map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'ErgoEye_RULA_' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.download = 'ErgoEye_' + new Date().toISOString().slice(0, 10) + '.csv';
   document.body.appendChild(a); a.click(); a.remove();
 };
 
-renderParts(null); renderRecords(); setLadder(null);
+setMethod(store.get('method', 'RULA'));
+renderRecords();
 window.addEventListener('resize', drawTimeline);
 loadModel();
 
